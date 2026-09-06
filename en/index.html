@@ -299,6 +299,43 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
 .who .tag{margin:0; font-size:10.5px; letter-spacing:.04em; text-align:right; white-space:nowrap}
 .info{width:26px; height:26px; border-radius:50%; border:1px solid var(--line-hi);
   background:var(--panel-lo); color:var(--dim); font-weight:700; cursor:pointer; flex:none}
+.info.task{font-size:13px; position:relative}
+.ctabs2{display:flex; gap:5px; margin:8px 0 10px}
+.ctab2{flex:1; padding:6px 0; font-size:12px; font-family:var(--ui); cursor:pointer;
+  color:var(--dim); background:var(--panel-lo); border:1px solid var(--line); border-radius:8px}
+.ctab2.on{color:#1a1206; background:var(--gold); border-color:var(--gold); font-weight:700}
+.crow{display:flex; gap:9px; align-items:flex-start; border:1px solid var(--line);
+  border-radius:10px; padding:8px; margin-bottom:6px; background:var(--panel-lo)}
+.crow.off{opacity:.45}
+.crow .cface{flex:none; width:54px}
+.crow .cq{width:52px; height:52px; border-radius:50%; border:1px dashed var(--line-hi);
+  display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:18px}
+.crow .cinfo{flex:1; min-width:0}
+.crow .cn{font-size:13px; color:var(--txt)}
+.crow .cr{font-size:10px; margin-left:6px}
+.crow .cm{font-size:11px; color:var(--faint); margin-top:2px; line-height:1.5}
+.crow .cact{flex:none; text-align:right}
+.crow .cstar{font-size:10px; color:var(--gold); margin-bottom:4px}
+.crow .sm{padding:4px 8px; font-size:11px}
+.cgot{display:flex; flex-wrap:wrap; gap:6px; justify-content:center}
+.cgotone{width:88px; text-align:center; border:1px solid var(--line); border-radius:10px;
+  padding:7px 4px; background:var(--panel-lo)}
+.cgotone .cn2{font-size:10.5px; color:var(--txt); margin-top:3px; line-height:1.3}
+.cgotone .cm2{font-size:9.5px; margin-top:2px}
+.info.task .dot{position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:50%;
+  background:var(--gold); box-shadow:0 0 0 2px var(--panel-lo)}
+.qrow{border:1px solid var(--line); border-radius:10px; padding:9px 10px; margin-bottom:7px;
+  background:var(--panel-lo)}
+.qrow .qt{font-size:13px; color:var(--txt)}
+.qrow .qm{font-size:11px; color:var(--faint); margin-top:3px}
+.qbar{height:5px; border-radius:3px; background:var(--line); margin:6px 0 7px; overflow:hidden}
+.qbar i{display:block; height:100%; background:var(--gold)}
+.qrow .sm{padding:5px 10px; font-size:12px}
+.dcard{border:1px solid var(--line-hi); border-radius:12px; padding:11px; background:var(--panel-lo)}
+.dstreak{display:flex; gap:4px; margin:8px 0 4px}
+.dstreak span{flex:1; text-align:center; font-size:10px; color:var(--faint);
+  border:1px solid var(--line); border-radius:6px; padding:4px 0}
+.dstreak span.on{color:#1a1206; background:var(--gold); border-color:var(--gold); font-weight:700}
 .top .clock{margin:0}
 .top .nowbar{padding:6px 9px; margin:0; border-radius:9px}
 .top .nb-t{font-size:11.5px; margin-bottom:4px}
@@ -489,6 +526,8 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
         <div class="me-s" id="meS"></div>
       </div>
       <div class="tag" id="tag">Day  1 d</div>
+      <button class="info task" id="cardbtn" aria-label="Tycoons">🎴</button>
+      <button class="info task" id="taskbtn" aria-label="Requests">📋<span class="dot" id="taskdot" hidden></span></button>
       <button class="info" id="infobtn" aria-label="Help">?</button>
     </div>
     <div class="clock" id="clock"></div>
@@ -674,9 +713,57 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
       <button class="sm" id="netretry">Reconnect to the server</button>
       <button class="sm" id="nettry">Play the trial town</button>
     </div>
+    <div class="d-t" style="margin:10px 0 6px;letter-spacing:.1em">C A R R Y   O V E R</div>
+    <p class="mdesc" id="acctinfo" style="margin:0 0 8px"></p>
+    <div class="acts" style="margin-bottom:12px" id="acctacts">
+      <button class="sm" id="acctmake">Create an account</button>
+      <button class="sm" id="acctlogin">Sign in</button>
+    </div>
     <div class="acts">
       <button class="sm" id="infoclose">Close</button>
       <button class="sm" id="resetall" style="color:var(--red)">Start over</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="acctbox">
+  <div class="mcard">
+    <div class="mtitle" id="accttitle">Create an account</div>
+    <p class="mdesc" id="acctdesc"></p>
+    <input id="acctmail" class="minput" type="email" placeholder="Email address" autocomplete="email" autocapitalize="off" spellcheck="false">
+    <input id="acctpass" class="minput" type="password" placeholder="Password (6 characters or more)" autocomplete="current-password" style="margin-top:8px">
+    <p class="mdesc" id="acctmsg" style="min-height:17px;margin:8px 0 0"></p>
+    <div class="acts" style="margin-top:8px">
+      <button class="sm go" id="acctgo">OK</button>
+      <button class="sm" id="acctcancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="cardbox">
+  <div class="mcard">
+    <div class="mtitle">T Y C O O N S <span style="font-size:11px;color:var(--faint)" id="cardgem"></span></div>
+    <div class="ctabs2">
+      <button class="ctab2 on" id="ctab_pull">Summon</button>
+      <button class="ctab2" id="ctab_book">Codex</button>
+      <button class="ctab2" id="ctab_eff">Effects</button>
+    </div>
+    <div id="cardbody"></div>
+    <div class="acts" style="margin-top:10px">
+      <button class="sm" id="cardclose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="taskbox">
+  <div class="mcard">
+    <div class="mtitle">Daily reward</div>
+    <div id="dailybox"></div>
+    <div class="d-t" style="margin:14px 0 6px;letter-spacing:.1em">R E Q U E S T S</div>
+    <p class="mdesc" id="questnote" style="margin:0 0 8px"></p>
+    <div id="questlist"></div>
+    <div class="acts" style="margin-top:10px">
+      <button class="sm" id="taskclose">Close</button>
     </div>
   </div>
 </div>
@@ -747,6 +834,90 @@ const landW=lv=>Math.min(8,3+Math.floor(lv/2));
 /* Tech:序盤は安くて効果も控えめ.上 at行くほど高く,効く */
 const TCOST=[150,450,1300,3800,10000];          /* Lv1→5 のResearch費 */
 const TTIME=[10,40,150,480,1200];               /* Lv1→5 の所要( min) */
+/* ============ Tycoonsカード ============
+   歴史上の実業家.レア度も効果の強さも“全盛期の資産(現在価値のestimates)”で決まる.
+    · 肖像はHere一from描いている(写真 なぞっていない)
+    · 企業の紋章やShop標は使わない
+    · 書いてあるのは事実の紹介だけ.作り話の悪事は書かない
+   金額はどれもResearch者 atよって幅のあるestimatesなので,画面 atも“estimates”and出す. */
+const CEFF={
+  wage:{n:"pay",     f:v=>`Wages from jobs +${v}%`},
+  res: {n:"Research",     f:v=>`Research ${v}% faster`},
+  build:{n:"Work",    f:v=>`Building and expansion ${v}% faster`},
+  prod:{n:"Output",     f:v=>`Company output +${v}%`},
+  stam:{n:"stamina",     f:v=>`Stamina drain ${v}% less`}
+};
+/* r: 3=Legend 2=Master 1=Notable / w: 資産のestimates(兆)/ e: 効果 */
+const CARDS=[
+  /* ---- Legend(estimates20 trillion yenor higher) ---- */
+  {id:"musa", n:"Mansa Musa",      y:"1280–1337", c:"Mali",   r:3, w:null,
+   note:"The king who controlled the gold and salt roads. The gold he gave away on pilgrimage is said to have wrecked prices along the way.",
+   e:{wage:12, prod:8},  look:{skin:"#8a5a3b",hat:"crown",beard:1,hue:"#e2b258"}},
+  {id:"rock", n:"John D. Rockefeller", y:"1839–1937", c:"USA", r:3, w:34,
+   note:"He held refining and shipping, and set the price of oil itself.",
+   e:{prod:12, wage:6}, look:{skin:"#e8cdb0",hat:"top",beard:0,hue:"#7fbf7f"}},
+  {id:"carn", n:"Andrew Carnegie", y:"1835–1919", c:"USA", r:3, w:31,
+   note:"Made his fortune in steel, then spent his later years building libraries.",
+   e:{prod:10, res:8},  look:{skin:"#e8cdb0",hat:"none",beard:2,hue:"#9fb6d0"}},
+  {id:"fugg", n:"Jakob Fugger",  y:"1459–1525", c:"Germany", r:3, w:22,
+   note:"Silver mines and money-changing let him lend to Europe's kings — and sway an imperial election.",
+   e:{prod:9, build:8}, look:{skin:"#e8cdb0",hat:"cap",beard:0,hue:"#c08fc0"}},
+
+  /* ---- Master(estimates3 trillion yenor higher) ---- */
+  {id:"ford", n:"Henry Ford",  y:"1863–1947", c:"USA", r:2, w:20,
+   note:"The assembly line made cars cheap, and he doubled his workers' daily pay at the same time.",
+   e:{prod:8, build:5},  look:{skin:"#e8cdb0",hat:"none",beard:0,hue:"#8fa8c8"}},
+  {id:"vand", n:"Cornelius Vanderbilt", y:"1794–1877", c:"USA", r:2, w:18,
+   note:"Started with a single ferry and ended up holding shipping and railroads together.",
+   e:{wage:8, build:5},  look:{skin:"#e8cdb0",hat:"top",beard:3,hue:"#b0a080"}},
+  {id:"ediso",n:"Thomas Edison",  y:"1847–1931", c:"USA", r:2, w:null,
+   note:"He turned invention into a business, building the research lab itself as an enterprise.",
+   e:{res:14},          look:{skin:"#e8cdb0",hat:"none",beard:0,hue:"#e0c060"}},
+  {id:"iwas", n:"Yataro Iwasaki",          y:"1835–1885", c:"Japan",   r:2, w:null,
+   note:"From low-ranking samurai to shipping magnate; ships were the foundation of his conglomerate.",
+   e:{wage:7, prod:5},  look:{skin:"#f0d6bb",hat:"none",beard:1,hue:"#c05050"}},
+  {id:"mitsui",n:"Takatoshi Mitsui",           y:"1622–1694", c:"Japan",   r:2, w:null,
+   note:"Opened Echigoya and changed what a price meant: cash, no markup.",
+   e:{wage:6, stam:8},  look:{skin:"#f0d6bb",hat:"chon",beard:0,hue:"#7090c0"}},
+  {id:"morg", n:"J.P. Morgan",        y:"1837–1913", c:"USA", r:2, w:4,
+   note:"A banker who once stopped a panic by putting up his own money.",
+   e:{wage:6, res:6},   look:{skin:"#e8cdb0",hat:"top",beard:4,hue:"#606080"}},
+
+  /* ---- Notable ---- */
+  {id:"shibu",n:"Eiichi Shibusawa",            y:"1840–1931", c:"Japan",   r:1, w:null,
+   note:"Helped found some 500 companies. The man of ”The Analects and the Abacus”.",
+   e:{res:6, wage:3},   look:{skin:"#f0d6bb",hat:"none",beard:1,hue:"#c8a040"}},
+  {id:"yasu", n:"Zenjiro Yasuda",          y:"1838–1921", c:"Japan",   r:1, w:null,
+   note:"Rose from money-changing and gathered finance into one house.",
+   e:{wage:5},          look:{skin:"#f0d6bb",hat:"none",beard:0,hue:"#70a070"}},
+  {id:"okura",n:"Kihachiro Okura",          y:"1837–1928", c:"Japan",   r:1, w:null,
+   note:"From gun trader to trade and construction; he left hotels and schools behind.",
+   e:{build:7},         look:{skin:"#f0d6bb",hat:"none",beard:2,hue:"#b08050"}},
+  {id:"furu", n:"Ichibei Furukawa",          y:"1832–1903", c:"Japan",   r:1, w:null,
+   note:"He turned failing copper mines around, one after another.",
+   e:{prod:6},          look:{skin:"#f0d6bb",hat:"none",beard:1,hue:"#a06840"}},
+  {id:"kino", n:"Bunzaemon Kinokuniya",    y:"1669?–1734", c:"Japan",  r:1, w:null,
+   note:"Legend says he crossed a storm-tossed sea with a hold full of mandarins.",
+   e:{wage:4, stam:6},  look:{skin:"#f0d6bb",hat:"chon",beard:0,hue:"#e09040"}},
+  {id:"honma",n:"Munehisa Homma",            y:"1724–1803", c:"Japan",   r:1, w:null,
+   note:"Built a fortune reading the rice market; credited with the candlestick chart.",
+   e:{res:5, wage:3},   look:{skin:"#f0d6bb",hat:"chon",beard:0,hue:"#8090b0"}},
+  {id:"takad",n:"Kahei Takadaya",        y:"1769–1827", c:"Japan",   r:1, w:null,
+   note:"Opened the northern sea routes, and settled a foreign dispute with nothing but himself.",
+   e:{build:5, stam:5}, look:{skin:"#f0d6bb",hat:"none",beard:1,hue:"#5090a0"}},
+  {id:"wedg", n:"Josiah Wedgwood", y:"1730–1795", c:"Britain", r:1, w:null,
+   note:"He sold pottery with a name and a standard attached — the origin of the brand.",
+   e:{prod:5, res:4},   look:{skin:"#e8cdb0",hat:"cap",beard:0,hue:"#70b0b0"}}
+];
+const CBY={}; CARDS.forEach(c=>CBY[c.id]=c);
+const RNAME=["","Notable","Master","Legend"];
+const RCOL =["","#9aa4b2","#d0d0d8","#e2b258"];
+/* Rates(画面 atも出す) */
+const CRATE={3:0.02, 2:0.13, 1:0.85};
+const CKAKU=[1,1.15,1.3,1.5,1.75];      /* 被りで上 る“格”1-5 */
+const CPULL=5, CPULL10=45;              /* 💎の値段 */
+const CSLOT=3;                          /* 連れて歩けるpeople数 */
+
 const TECHS=[
   {id:"kin",n:"Diligence",ic:"⛏",eff:[0,2,5,9,14,20], f:v=>`pay +${v}%`,        mul:1.0},
   {id:"kou",n:"Bargaining",ic:"🤝",eff:[0,2,4,7,10,15], f:v=>`Food price −${v}%`,  mul:0.9},
@@ -815,7 +986,7 @@ const OPT={
   logi:{n:"Operator Freight Depot",fee:.20,cap:60,delay:120,op:1},
   whol:{n:"Operator Wholesale Market",    buy:.65,sell:1.40,cap:1e9,op:1}
 };
-const SVCBASE={logi:{unit:40,truck:200},whol:{unit:60,wh:300}};   /* skill1あたり/設備1つあたりの1d取扱量 */
+const SVCBASE={logi:{unit:40,truck:200},whol:{unit:60,wh:300}};   /* skill1あたり/設備1あたりの1d取扱量 */
 const WAGE_DAY=800;
 const MAXWORK=lv=>Math.min(12,2+Math.floor(lv/2));
 const matNeed=lv=>lv<5?0:Math.round(Math.pow(1.45,lv-5)*2);
@@ -833,12 +1004,13 @@ const F=()=>FIRMS[S.firm.type];
 const techOk=f=>!f.tech||lv(f.tech[0])>=f.tech[1];
 function firmBoost(type){
   const f=FIRMS[type];
-  if(f.site==="farm"||type==="food")return 1+iEff("noga")+tEff("kei");
-  if(f.site==="mine"||f.site==="forest")return 1+iEff("saik")+tEff("kei");
-  if(["mat","steel","part","auto"].includes(type))return 1+iEff("kogy")+tEff("kei");
-  if(type==="diner")return 1+iEff("chor")+tEff("kei");
-  if(f.svc)return 1+iEff("butu")+tEff("kei");
-  return 1+tEff("kei");
+  const cb=(typeof cardEff==="function")?cardEff("prod"):0;
+  if(f.site==="farm"||type==="food")return 1+iEff("noga")+tEff("kei")+cb;
+  if(f.site==="mine"||f.site==="forest")return 1+iEff("saik")+tEff("kei")+cb;
+  if(["mat","steel","part","auto"].includes(type))return 1+iEff("kogy")+tEff("kei")+cb;
+  if(type==="diner")return 1+iEff("chor")+tEff("kei")+cb;
+  if(f.svc)return 1+iEff("butu")+tEff("kei")+cb;
+  return 1+tEff("kei")+cb;
 }
 
 /* ---- 場所(mine · farmland · Forest · The School · Diner) ---- */
@@ -1353,7 +1525,7 @@ const DAY=1440;                       /* 1d=1440 min */
 /* 世界の始まり.Onnlnの時は全員 この一本の時計で動く(ゲーム1 min=実1 min) */
 const WORLD_EPOCH=Date.UTC(2026,8,1,0,0,0);
 const worldT=()=>(Date.now()-WORLD_EPOCH)/60000;
-/* Onnln at入る/出る時 at,進行中のもの 飛ばないよう時刻 ずらす */
+/* Onnln atSign in/出る時 at,進行中のもの 飛ばないよう時刻 ずらす */
 function rebaseClock(nt){
   const d=nt-S.t;
   if(S.busy){S.busy.end+=d;}
@@ -1386,6 +1558,7 @@ function payCash(n,label){
   return paid;
 }
 function spend(hp,label){
+  hp=Math.max(1,Math.round(hp*(1-((typeof cardEff==="function")?cardEff("stam"):0))));
   if(S.hp<hp){flash(`Not enough stamina (${label} at ${hp} needed)`); return false;}
   S.hp-=hp; return true;
 }
@@ -1456,7 +1629,7 @@ function finishBusy(){
   if(b.kind==="work"){
     const j=JOBS[b.data.job];
     const base=S.job==="pc"?pcWage():j.pay;
-    const gross=Math.round(base*(1+tEff("kin"))*(cls()==="worker"?1.18:1)*(S.buff.meal>S.t?1.05:1));
+    const gross=Math.round(base*(1+tEff("kin")+cardEff("wage"))*(cls()==="worker"?1.18:1)*(S.buff.meal>S.t?1.05:1));
     const tax=Math.round(gross*P.tax);
     S.cash+=gross-tax;
     say(`${j.n}shift finished`,gross-tax); if(tax)say(" income tax 10%",-tax);
@@ -1545,7 +1718,8 @@ const S={t:0,real:Date.now(),cash:5000,bank:0,food:1,hp:55,hlv:1,gems:8,job:"par
   pos:{bed:[0,0],sto:[2,0],vau:[0,2],stu:[2,2]},queue:null,build:null,
   npcs:[],sel:-1,selRoom:"bed",log:[],over:false,pane:"map",
   auc:null,aucLog:[],buff:{},ptUsed:{},
-  dm:{},contracts:[],credit:50,ctab:"town",dmOpen:null,netPlot:null};
+  dm:{},contracts:[],credit:50,ctab:"town",dmOpen:null,netPlot:null,
+  cards:{},team:[]};
 TECHS.forEach(t=>S.tech[t.id]=0); ITECHS.forEach(t=>S.tech[t.id]=0);
 function makeNpcs(){
   const a=[];
@@ -1684,7 +1858,7 @@ const travelGem=()=>gemFor(travelLeft());
 const busyGem=()=>gemFor(busyLeft());
 function gemTravel(){
   const left=travelLeft(); if(left<=0)return;
-  const c=travelGem(); if(S.gems<c){flash("💎is short");return;}
+  const c=travelGem(); if(S.gems<c){flash("Not enough 💎");return;}
   S.gems-=c; S.busy.end-=left; S.busy.total-=left; S.busy.travel-=left;
   say(`💎${c}skipped the travel (${nameAt(S.busy.to)})`,0,1); flash("You are there now");
   if(S.busy.end<=S.t)finishBusy();
@@ -1767,7 +1941,7 @@ function upgradeHouse(){
     S.cash-=c; if(S.buff.deed){S.buff.deed=0; say(" Halved by the deed",0);}
     say(`Rebuild begun Lv${HLV()+1}`,-c,1);
   }
-  const mm=rampMin(hUpTime(HLV()));
+  const mm=rampMin(hUpTime(HLV())*(1-cardEff("build")));
   S.build={id:"__house",left:mm,total:mm,move:mv};
   if(mv)say(" During the move your vault is unusable (every coin you carry is exposed)",0,1);
   flash(mv?`${TIERS[tierOf(HLV()+1)].n}Move begun to`:`Lv${HLV()+1} rebuild begun to`); tutStep("upgrade"); draw();
@@ -1797,7 +1971,7 @@ function build(r){
   const c=cost(r,l);
   if(S.cash<c){flash("Not enough funds");return;}
   if(!spend(5,"Extend"))return;
-  S.cash-=c; const mm=rampMin(rTime(l));
+  S.cash-=c; const mm=rampMin(rTime(l)*(1-cardEff("build")));
   S.build={id:r.id,left:mm,total:mm};
   say(`Extension begun ${r.n} Lv${l+1}`,-c,1); flash(r.n+"extension begun"); draw();
 }
@@ -1829,7 +2003,7 @@ function research(t){
   const l=lv(t.id); if(l>=MAXLV||S.queue)return;
   const c=tCost(t,l); if(S.cash<c){flash("Not enough for the research");return;}
   if(!spend(5,"Research"))return;
-  S.cash-=c; const mm=rampMin(tTime(t,l));
+  S.cash-=c; const mm=rampMin(tTime(t,l)*(1-cardEff("res")));
   S.queue={id:t.id,left:mm,total:mm};
   say(`Research begun ${t.n} Lv${l+1}`,-c,1); flash(t.n+"research begun"); tutStep("research"); draw();
 }
@@ -2106,7 +2280,7 @@ function drawTut(){
   /* 地図 押す手順:,光っている建物 画面from外れていたら寄せ直す */
   if(c.map){
     const i=c.map(), p=PLOTS[i];
-    /* 下from出ているシート 光っている建物 隠さないよう,選択 外す */
+    /* 下from出ているシート 光っている建物 隠さないよう,選択 Remove */
     if(p&&S.sel>=0&&S.sel!==i){ S.sel=-1; drawMap(); }
     if(p){
       const cx=(p.x+p.w/2)*CELL, cy=(p.y+p.h/2)*CELL;
@@ -2411,7 +2585,7 @@ function drawDetail(){
         S.cash-=nv.cost; S.veh++; say(`${nv.n}Bought`,-nv.cost,1);
         flash(`${nv.n}is yours`); draw();},"wide",S.cash<nv.cost);
   }else if(kind==="corp"){
-    const j=JOBS.npc, wg=Math.round(j.pay*(1+tEff("kin")));
+    const j=JOBS.npc, wg=Math.round(j.pay*(1+tEff("kin")+cardEff("wage")));
     head("Operator Company","Open to anyone",`1shift ${yen(wg)}(income tax10%is taken)`);
     if(S.job!=="npc")mkBtn(box,"💼","Work here","No conditions",()=>{S.job="npc";S.jobAt=null;say("Joined an operator company",0,1);draw();},"wide");
     else mkBtn(box,"⚒",`Work (${fmtMin(j.min)})`,
@@ -2449,12 +2623,12 @@ function drawDetail(){
     if(needsPt())mkBtn(box,"🤝","Compare partners","Same as “Partners“ on the Company tab",()=>openPartners(k2),"key wide");
     else mkBtn(box,"🏭","Available once you have a company","Involved in what a producer buys in and ships out",()=>go("biz"),"wide");
   }else if(kind==="pcco"&&coAt(S.sel).pt){
-    const co=coAt(S.sel), k2=co.type, j=JOBS.pc, wg=Math.round(co.wage*(1+tEff("kin")));
+    const co=coAt(S.sel), k2=co.type, j=JOBS.pc, wg=Math.round(co.wage*(1+tEff("kin")+cardEff("wage")));
     const why=canJoin(co), mine=S.job==="pc"&&S.jobAt===S.sel, full=ptFull(S.sel);
     const isCur=needsPt()&&S.firm.pt[k2].k==="npc"&&S.firm.pt[k2].i===S.sel;
     head(co.name,FIRMS[k2].n,
       `${ptTermText(k2,co.pt)}<br>Signing fee ${yen(co.pt.sign)} yen / Weekly dues ${yen(co.pt.week)} yen / housing Lv${co.pt.minLv} or higher / slots ${co.pt.slots}firms (${full?"full":`free ${co.pt.slots-ptUsed(S.sel)}`})`
-      +`<br><span class="d-t">shift 1 runs ${yen(wg)} yen  ·  Requirement: housing Lv${co.minLv} or higher</span>`);
+      +`<br><span class="d-t">shift once ${yen(wg)} yen  ·  Requirement: housing Lv${co.minLv} or higher</span>`);
     if(needsPt())mkBtn(box,"🤝",isCur?"Partnered":"Partner with this firm",isCur?"Current partner":full?"full":`Signing fee ${yen(co.pt.sign)} yen`,()=>signPartner(k2,S.sel),"key wide",isCur||full||HLV()<co.pt.minLv||S.cash<co.pt.sign);
     if(!mine)mkBtn(box,"💼","Apply and join",why?why:"You meet the conditions",
       ()=>{S.job="pc";S.jobAt=S.sel;say(`${co.name}joined`,0,1);chatPush("",`${S.name||"you"}   ${co.name} joined`,"sys");draw();},
@@ -2463,7 +2637,7 @@ function drawDetail(){
       `${tv>0?`travel ${fmtMin(tv)}+`:""}shift ${fmtMin(j.min)} / +${yen(Math.round(wg*0.9))} yen`,
       work,"key wide",isBusy()||S.hp<j.hp);
   }else if(kind==="pcco"){
-    const co=coAt(S.sel), j=JOBS.pc, wg=Math.round(co.wage*(1+tEff("kin")));
+    const co=coAt(S.sel), j=JOBS.pc, wg=Math.round(co.wage*(1+tEff("kin")+cardEff("wage")));
     const why=canJoin(co), mine=S.job==="pc"&&S.jobAt===S.sel;
     head(co.name,FIRMS[co.type].n,
       `1Shift (2hours) ${yen(wg)} yen<br>Requirement: housing Lv${co.minLv} or higher${co.minCls?` / Role “${CLASSES.find(c=>c.id===co.minCls).n}”`:""}`
@@ -2819,7 +2993,7 @@ function drawAuc(){
 
 
 /* ---- 企業 ---- */
-/*  hours経過:生産 · pay · 需要の runs復 · of market戻り */
+/*  hours経過:Output · pay · 需要の runs復 · of market戻り */
 
 /* ---- Market(personal 買う) ---- */
 
@@ -3026,7 +3200,7 @@ function fireWorker(k){
   say(`${w.n}fired`,-sev,1); draw();
 }
 
-/* ---- 生産 · dNext(skill 反映) ---- */
+/* ---- Output · dNext(skill 反映) ---- */
 function hireWorker(){ toggleListing(); }
 
 /* ---- 画面:companyタブ ---- */
@@ -3335,7 +3509,7 @@ function roomFor(gk){
 }
 /* Freightぶ手当て.companyならFreight quotaandfreight,personalは手でFreightべる minだけ */
 function shipFor(gk,q){
-  if(!hasFirm()){ if(q>HAND_CAP){flash(`Without a company1 runs ${HAND_CAP}each trip (what you can carry)`);return null;} return {fee:0}; }
+  if(!hasFirm()){ if(q>HAND_CAP){flash(`Without a companyonce ${HAND_CAP}each trip (what you can carry)`);return null;} return {fee:0}; }
   if(shipLeft()<q){flash(`Not enough freight quota today ( ${shipLeft()})`);return null;}
   const fee=Math.round(S.market[gk].price*q*ptOf("logi").fee);
   if(S.cash<fee){flash(`freight ${yen(fee)}is short`);return null;}
@@ -3530,11 +3704,19 @@ function takeFreeGem(){
 function openGemShop(){
   const box=$("gembox"), list=$("gemlist"); list.innerHTML="";
   $("gemhave").textContent=`Now ${yen(S.gems)} pcs`;
+  const online=(typeof SRV==="function")&&SRV();
   const fw=document.createElement("div"); fw.className="detail";
-  fw.innerHTML=`<div class="d-h"><span class="d-n">🎁 Free today💎</span><span class="d-t">1d1 pcs</span></div>
-    <div class="d-b">${freeGemReady()?"Ready to collect":"You can collect again tomorrow"}</div>`;
-  const fa=document.createElement("div"); fa.className="acts"; fw.appendChild(fa);
-  mkBtn(fa,"🎁","Collect","1d1a day. A reason to come back",()=>{takeFreeGem(); openGemShop();},"key wide",!freeGemReady());
+  if(online){
+    fw.innerHTML=`<div class="d-h"><span class="d-n">🎁 Daily reward</span><span class="d-t">grows with streaks</span></div>
+      <div class="d-b">Collect it from 📋 above. It grows the more days you come — day 7 gives 💎12 and 30,000 yen.</div>`;
+    const fa=document.createElement("div"); fa.className="acts"; fw.appendChild(fa);
+    mkBtn(fa,"📋","Go collect","Daily reward",()=>{ box.classList.remove("on"); $("taskbox").classList.add("on"); taskDraw(); taskSync(true); },"key wide");
+  }else{
+    fw.innerHTML=`<div class="d-h"><span class="d-n">🎁 Free today💎</span><span class="d-t">1d1 pcs</span></div>
+      <div class="d-b">${freeGemReady()?"Ready to collect":"You can collect again tomorrow"}</div>`;
+    const fa=document.createElement("div"); fa.className="acts"; fw.appendChild(fa);
+    mkBtn(fa,"🎁","Collect","1d1 pcs",()=>{takeFreeGem(); openGemShop();},"key wide",!freeGemReady());
+  }
   list.appendChild(fw);
   GEMPACK.forEach(p=>{
     const d=document.createElement("div"); d.className="detail";
@@ -3746,7 +3928,7 @@ function canSign(c,quiet){
   }
   return true;
 }
-/* Signedしたandきの効き目.自 min どちらのSideかで向き 決まるので,
+/* SignedしたandきのEffects.自 min どちらのSideかで向き 決まるので,
    承諾した側でも,承諾された側でも,同じこれ 呼べば金and物 正しく動く */
 function applyContract(c){
   const T=c.terms;
@@ -3851,7 +4033,7 @@ function contractTick(){
     draw();
   });
 }
-/* 雇われているcontract あれば,daily pay 入る(雇う側のWagesはStaffandして毎d引かれている) */
+/* 雇われているcontract あれば,daily pay Sign in(雇う側のWagesはStaffandして毎d引かれている) */
 function contractDaily(){
   (S.contracts||[]).forEach(c=>{
     if(c.state!=="active"||c.kind!=="hire"||c.mine)return;
@@ -4312,9 +4494,12 @@ function supaDriver(sb){
     async join(name,want){
       const {data:{user}}=await sb.auth.getUser();
       /* townの地図は種from作るので全員同じ.だfromServer at要るのは“どの区画か”だけ */
-      const mine=await T("players").select("plot").eq("id",user.id).maybeSingle();
-      if(mine.data){ await T("players").update({name,seen:new Date().toISOString()}).eq("id",user.id);
-        return {id:user.id,plot:mine.data.plot}; }
+      const mine=await T("players").select("plot,name").eq("id",user.id).maybeSingle();
+      if(mine.data){
+        /* 別の端末from入り直した直後は名前 手元 atnone.その時は元の名前 消さない */
+        const keep=(!name||name==="Nameless")?mine.data.name:name;
+        await T("players").update({name:keep,seen:new Date().toISOString()}).eq("id",user.id);
+        return {id:user.id,plot:mine.data.plot,name:keep}; }
       const {data:all}=await T("players").select("plot");
       const taken=new Set((all||[]).map(x=>x.plot));
       const free=claimable().filter(i=>!taken.has(i));
@@ -4350,6 +4535,13 @@ function supaDriver(sb){
     /* 板and現金はServerの関数(RPC)だけ 動かす */
     async bal(){ const {data,error}=await sb.rpc("get_cash"); if(error)throw error; return data; },
     async earn(n){ const {data,error}=await sb.rpc("earn",{p_amount:n}); if(error)throw error; return data; },
+    /* --- Day 3段:進行の保管and,毎dの目的 --- */
+    async savePut(blob){ const {data,error}=await sb.rpc("save_put",{p_blob:blob}); if(error)throw error; return data; },
+    async saveGet(){ const {data,error}=await sb.rpc("save_get"); if(error)throw error; return data; },
+    async dailyState(){ const {data,error}=await sb.rpc("daily_state"); if(error)throw error; return data; },
+    async dailyClaim(){ const {data,error}=await sb.rpc("daily_claim"); if(error)throw error; return data; },
+    async questSync(){ const {data,error}=await sb.rpc("quest_sync"); if(error)throw error; return data; },
+    async questClaim(i){ const {data,error}=await sb.rpc("quest_claim",{p_idx:i}); if(error)throw error; return data; },
     /* Day 2段:Stock · market · the house purse · Shop */
     async inv(){ const {data,error}=await sb.rpc("inv_json"); if(error)throw error; return data||{}; },
     async invDelta(d){ const {data,error}=await sb.rpc("inv_delta",{p_delta:d}); if(error)throw error; return data; },
@@ -4390,12 +4582,13 @@ async function connectSupa(){
   }),12000,"Partsの読み込み"); }
   if(!window.supabase)throw new Error("could not load");
   const sb=window.supabase.createClient(NETCFG.url,NETCFG.key);
+  NET.sb=sb;
   const {data:{session}}=await withTimeout(sb.auth.getSession(),12000,"Serverの返事");
   if(!session){ const {error}=await withTimeout(sb.auth.signInAnonymously(),15000,"入場");
     if(error)throw error; }
   return supaDriver(sb);
 }
-/* want:"srv" … Server 試す(既定)/ "local" … the trial town at入る */
+/* want:"srv" … Server 試す(既定)/ "local" … the trial town atSign in */
 async function netStart(want){
   want=want||(NETCFG.url?"srv":"local");
   if(NET.on&&NET.mode===want)return true;
@@ -4412,9 +4605,11 @@ async function netStart(want){
   }
   try{
     NET.drv=drv; NET.mode=town; NET.err=null;
-    enterTown(town);                                   /* そのtownの自 min 出す(居なければ作る) */
+    const madeNew=enterTown(town);                     /* そのtownの自 min 出す(居なければ作る) */
+    if(town==="srv"){ try{ await cloudLoad(!madeNew); }catch(e){ console.warn(e); } }
     const r=await withTimeout(NET.drv.join(S.name||"Nameless",S.netPlot),20000,"入場");
     NET.id=r.id; S.netPlot=r.plot;
+    if(!S.name&&r.name)S.name=r.name;
     NET.on=true; NET.ready=true; NET.busy=false;
     rebaseClock(worldT());
     S.book=initBook(); S.orders=[];                    /* 板はServerのもの at置き換える */
@@ -4429,7 +4624,12 @@ async function netStart(want){
     NET.beatT=setInterval(netBeat,20000); netBeat();
     if(NET.ledT)clearInterval(NET.ledT);
     NET.ledT=setInterval(()=>{ ledFlush().catch(()=>{}); invFlush().catch(()=>{}); },2500);
-    drawNetInfo(); draw(); return true;
+    drawNetInfo(); draw();
+    /* Day 3段:引き継ぎの状態and,今dのRequests 取り at行く */
+    acctUser().then(acctDraw).catch(()=>{});
+    taskSync(true).catch(()=>{});
+    cloudSave(true).catch(()=>{});
+    return true;
   }catch(e){
     console.error(e); NET.busy=false; NET.err="down"; netStop(); drawNetInfo(); draw();
     /* Server 駄目でも遊べるよう at,the trial town to自動で落ちる */
@@ -4698,7 +4898,7 @@ async function _netCancel(gk,side,idx){
   }catch(e){ flash("could not cancel"); }
   draw();
 }
-/* ---- Shop(operatorのMarket · Wholesale).値段はServer 決める.the house pursefrom払われる ---- */
+/* ---- Shop(operatorのMarket · Wholesale).値段はServer Save.the house pursefrom払われる ---- */
 const cleanQ=q=>{ q=Math.floor(Number(q)); return Number.isFinite(q)&&q>0?q:0; };
 const netShopBuy =(gk,q)=>netSeq(()=>_netShop("buy",gk,q));
 const netShopSell=(gk,q)=>netSeq(()=>_netShop("sell",gk,q));
@@ -4761,7 +4961,7 @@ async function _netTake(gk,side,qty){
   draw();
 }
 
-/* ---- 画面:companyタブ(生産Parts min) ---- */
+/* ---- 画面:companyタブ(OutputParts min) ---- */
 function drawProduction(B){
   const f=F(), cap=MAXWORK(HLV());
   const w=document.createElement("div"); w.className="detail";
@@ -5092,7 +5292,7 @@ function draw(){
   {const j=JOBS[S.job]; const c=CLASSES.find(x=>x.id===S.cls);
    const jn=S.job==="pc"?(hasFirm()&&S.jobAt==null?S.firm.name:(coAt(S.jobAt)||{}).name||j.n):j.n;
    $("meS").textContent=(c?c.ic+c.n+" / ":"")+(hasFirm()?`${F().ic}${S.firm.name} President / `:"")+
-     `${j.ic}${jn} ${yen(Math.round((S.job==="pc"?pcWage():j.pay)*(1+tEff("kin"))))}/${fmtMin(j.min)}`;}
+     `${j.ic}${jn} ${yen(Math.round((S.job==="pc"?pcWage():j.pay)*(1+tEff("kin")+cardEff("wage"))))}/${fmtMin(j.min)}`;}
   let rk="F"; RANKS.forEach(([v,r])=>{if(tot()>=v)rk=r;});
   $("rank").textContent=rk;
   drawClock($("clock"));
@@ -5242,7 +5442,8 @@ function drawNetBar(){
   const need=!NET.on||NET.mode!=="srv";
   if(!need){ if(b)b.remove(); return; }
   if(!b){ b=document.createElement("div"); b.id="netbar"; b.className="netbar";
-    b.onclick=()=>{ $("infover").textContent=VERSION; drawNetInfo(); $("infobox").classList.add("on"); };
+    b.onclick=()=>{ $("infover").textContent=VERSION; drawNetInfo(); $("infobox").classList.add("on");
+      acctUser().then(acctDraw); drawInstall(); };
     document.querySelector(".app").prepend(b); }
   const t=NET.busy?"Connecting…"
         :NET.on?"Trial town (this device only)"
@@ -5250,7 +5451,8 @@ function drawNetBar(){
         :"Cannot reach the server — tap to check";
   if(b.textContent!==t)b.textContent=t;
 }
-$("infobtn").onclick=()=>{$("infover").textContent=VERSION; drawNetInfo(); $("infobox").classList.add("on");};
+$("infobtn").onclick=()=>{$("infover").textContent=VERSION; drawNetInfo(); $("infobox").classList.add("on");
+  acctUser().then(acctDraw); drawInstall();};
 $("netretry").onclick=async()=>{ NET.fell=0; netStop(); await netStart("srv"); };
 $("nettry").onclick=async()=>{ netStop(); await netStart("local"); $("infobox").classList.remove("on"); };
 /* 起動したら必ず繋ぎ at行く.モードの選択はnone */
@@ -5264,6 +5466,451 @@ if(!CAN_SAVE){
   $("titlebox").querySelector(".tcard").appendChild(t);
 }
 $("infoclose").onclick=()=>$("infobox").classList.remove("on");
+/* ===================== Day 3段 =====================
+    · 進行まるごand Server at置く(端末 変えても戻ってこられる)
+    · メールandパスワードで引き継ぐ
+    · Daily rewardand,1 hoursごandのRequests
+   ================================================ */
+const SRV=()=>!!(NET.drv&&NET.drv.savePut&&NET.mode==="srv");
+
+/* ---- 進行まるごandのクnウド保存 ----
+   持ち歩かないもの(Town chat · 板 · 出入りの記録)はRemove.大きくなるだけで意味 ない */
+const CLOUD_SKIP=["chat","book","orders","log","aucLog"];
+function cloudBlob(){
+  const o={};
+  Object.keys(S).forEach(k=>{ if(CLOUD_SKIP.indexOf(k)<0)o[k]=S[k]; });
+  return o;
+}
+let cloudT=0, cloudBusy=false;
+async function cloudSave(force){
+  if(!SRV()||!S.name||cloudBusy)return;
+  if(!force&&Date.now()-cloudT<60000)return;
+  cloudBusy=true;
+  try{
+    const at=await NET.drv.savePut(cloudBlob());
+    S.cloudAt=at; cloudT=Date.now(); saveNow();
+  }catch(e){ console.warn("cloudSave",e); }
+  finally{ cloudBusy=false; }
+}
+/* hadLocal … この端末 at続き あったか */
+async function cloudLoad(hadLocal){
+  if(!SRV())return false;
+  let r=null;
+  try{ r=await NET.drv.saveGet(); }catch(e){ console.warn("cloudLoad",e); return false; }
+  if(!r||!r.blob||!r.blob.name)return false;
+  /* 手元 at続き あって,Server側も同じものなら触らない */
+  if(hadLocal&&r.at&&r.at===S.cloudAt)return false;
+  const keepPlot=S.netPlot;
+  Object.assign(S,r.blob);
+  S.cloudAt=r.at; S.real=Date.now();
+  if(S.netPlot==null&&keepPlot!=null)S.netPlot=keepPlot;
+  if(!Array.isArray(S.chat))S.chat=[];
+  if(!Array.isArray(S.log))S.log=[];
+  if(!Array.isArray(S.aucLog))S.aucLog=[];
+  S.book=initBook(); S.orders=[];
+  Object.keys(SITES).forEach(i=>{SITES[i].owner=null;});
+  if(S.firm&&S.firm.site>=0&&SITES[S.firm.site])SITES[S.firm.site].owner="me";
+  if(typeof migrate==="function")migrate();
+  if(hadLocal)say("Loaded the progress you made on another device",0,1);
+  return true;
+}
+
+/* ---- 引き継ぎ(メールandパスワード) ---- */
+const ACCT={mode:"make",busy:false,user:null};
+async function acctUser(){
+  if(!NET.sb)return null;
+  try{ const {data:{user}}=await NET.sb.auth.getUser(); ACCT.user=user||null; return ACCT.user; }
+  catch(_){ return null; }
+}
+function acctDraw(){
+  const e=$("acctinfo"); if(!e)return;
+  const mk=$("acctmake"), lg=$("acctlogin");
+  if(!SRV()){
+    e.innerHTML='<span style="color:var(--faint)">Available only while you are in the server town.</span>';
+    if(mk)mk.style.display="none"; if(lg)lg.style.display="none"; return;
+  }
+  const u=ACCT.user, mail=u&&u.email;
+  if(mail){
+    e.innerHTML=`<b style="color:var(--gold)">${mail}</b> is linked to this town.<br>
+      Sign in with the same email and password on another device to continue from here.`;
+    if(mk){mk.textContent="Change password"; mk.style.display="";}
+    if(lg){lg.textContent="Sign in to another account"; lg.style.display="";}
+  }else{
+    e.innerHTML=`<span style="color:var(--red)">Not set up yet.</span>
+      Your progress lives <b>only inside this browser</b>.
+      If you clear your history, or do not open the game for a while, <b>it is gone for good</b> (iPhone deletes it after 7 days).
+      Set an email and password and you can continue on any device.`;
+    if(mk){mk.textContent="Create an account"; mk.style.display="";}
+    if(lg){lg.textContent="Sign in"; lg.style.display="";}
+  }
+}
+function acctOpen(mode){
+  ACCT.mode=mode;
+  const has=!!(ACCT.user&&ACCT.user.email);
+  $("accttitle").textContent = mode==="make" ? (has?"Change password":"Create an account") : "Sign in";
+  $("acctdesc").innerHTML = mode==="make"
+    ? "This links an email and password to your current progress.<br>Your progress stays as it is. No confirmation email is sent."
+    : "Sign in to an account you made on another device.<br><b>What you have on this device will be replaced by that account.</b>";
+  $("acctmail").value = has?ACCT.user.email:"";
+  $("acctpass").value = "";
+  $("acctmsg").textContent = "";
+  $("acctgo").textContent = mode==="make" ? "Save" : "Sign in";
+  $("acctbox").classList.add("on");
+}
+async function acctGo(){
+  if(ACCT.busy)return;
+  const mail=$("acctmail").value.trim(), pass=$("acctpass").value;
+  const msg=$("acctmsg");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){ msg.innerHTML='<span style="color:var(--red)">That is not a valid email address</span>'; return; }
+  if((pass||"").length<6){ msg.innerHTML='<span style="color:var(--red)">Password must be at least 6 characters</span>'; return; }
+  if(!NET.sb){ msg.innerHTML='<span style="color:var(--red)">Not connected to the server</span>'; return; }
+  ACCT.busy=true; $("acctgo").disabled=true; msg.textContent="Sending…";
+  try{
+    if(ACCT.mode==="make"){
+      await cloudSave(true);                       /* 先 atNowの進行 預ける */
+      const {error}=await NET.sb.auth.updateUser({email:mail,password:pass});
+      if(error)throw error;
+      await acctUser(); acctDraw();
+      if(ACCT.user&&ACCT.user.email===mail){
+        msg.innerHTML='<span style="color:var(--gold)">Done</span>';
+        flash("Carry-over is set up");
+        setTimeout(()=>$("acctbox").classList.remove("on"),700);
+      }else{
+        /* Server側で“確認メール必須” atなっている時 */
+        msg.innerHTML='<span style="color:var(--gold)">A confirmation email has been sent. '+
+          'Open the link in it to finish setting up carry-over (check your spam folder too).</span>';
+      }
+    }else{
+      const {error}=await NET.sb.auth.signInWithPassword({email:mail,password:pass});
+      if(error)throw error;
+      msg.textContent="Loading…";
+      $("acctbox").classList.remove("on");
+      await acctSwitch();
+      await acctUser(); acctDraw();
+      flash("Signed in");
+    }
+  }catch(e){
+    const t=String((e&&e.message)||e);
+    const ja = /Invalid login/i.test(t) ? "Wrong email or password"
+             : /already registered|already been registered/i.test(t) ? "That email is taken. Use Sign in instead"
+             : /Password should be/i.test(t) ? "Password is too short"
+             : /Email .*invalid|invalid.*email/i.test(t) ? "That email address cannot be used"
+             : t;
+    msg.innerHTML='<span style="color:var(--red)">'+ja+'</span>';
+  }finally{ ACCT.busy=false; $("acctgo").disabled=false; }
+}
+/* Sign in後,この端末の中身 捨ててServerfrom引き直す */
+async function acctSwitch(){
+  netStop();
+  try{ localStorage.removeItem(saveKey()); }catch(_){}
+  newChar({}); S.name=""; S.netPlot=null; S.cloudAt=null;
+  await netStart("srv");
+  draw();
+}
+
+/* ---- Daily rewardand,1 hoursごandのRequests ---- */
+const TASK={daily:null,quests:[],next:null,t:0,busy:false};
+const DAILY_GEM=[2,3,4,5,6,8,12];
+async function taskSync(force){
+  if(!SRV()||!S.name)return;
+  if(!force&&Date.now()-TASK.t<45000)return;
+  TASK.t=Date.now();
+  try{
+    TASK.daily=await NET.drv.dailyState();
+    const q=await NET.drv.questSync();
+    TASK.quests=(q&&q.slots)||[]; TASK.next=q&&q.next;
+  }catch(e){ console.warn("task",e); return; }
+  taskDot();
+  if($("taskbox").classList.contains("on"))taskDraw();
+}
+const qDone=q=>Number(q.now||0)>=Number(q.need||0);
+function taskDot(){
+  const d=$("taskdot"); if(!d)return;
+  d.hidden=!((TASK.daily&&TASK.daily.ready)||TASK.quests.some(qDone));
+}
+function qText(q){
+  if(q.k==="own"){ const g=GOODS[q.good]; return `${g?g.ic+g.n:q.good}   <b>${q.need} pcs</b> ためる`; }
+  if(q.k==="cash") return `Raise your cash by <b>${yen(q.need)} yen</b> ぶん増やす`;
+  if(q.k==="hlv")  return `Raise your home level by <b>1</b> 上げる`;
+  if(q.k==="trade")return `Trade with someone on the order book <b>once</b> tradeする`;
+  return q.txt||"Requests";
+}
+function taskDraw(){
+  const db=$("dailybox"), ql=$("questlist"), qn=$("questnote");
+  if(!db)return;
+  if(!SRV()||!S.name){
+    db.innerHTML='<p class="mdesc">Starts once you pick a name in the server town.</p>';
+    ql.innerHTML=""; qn.textContent=""; return;
+  }
+  const d=TASK.daily;
+  if(d){
+    const st=d.ready?d.next:d.streak;
+    db.innerHTML=`<div class="dcard">
+      <div style="font-size:13px">${d.ready?`Today's reward is ready`:`Today's reward has been collected`}
+        <span style="color:var(--faint)"> (streak ${d.streak} d目 / total ${d.total} d)</span></div>
+      <div class="dstreak">${DAILY_GEM.map((g,i)=>
+        `<span class="${(i+1)<=st?"on":""}">${i+1}d<br>💎${g}</span>`).join("")}</div>
+      ${d.ready?`<button class="sm go" id="dailygo" style="width:100%;margin-top:6px">💎${DAILY_GEM[d.next-1]}  — collect${d.next===7?"(+30,000)":""}</button>`
+               :`<div style="font-size:11px;color:var(--faint);margin-top:4px">Comes back when the date changes. Miss a day and the streak returns to day 1.</div>`}
+    </div>`;
+    if(d.ready)$("dailygo").onclick=dailyGo;
+  }else db.innerHTML='<p class="mdesc">Loading…</p>';
+
+  const n=TASK.quests.length;
+  qn.innerHTML=`One request arrives every hour (up to 6). <b>${n} cases</b>あります.`+
+    (n>=6?'<span style="color:var(--gold)">  full</span>':'');
+  ql.innerHTML=TASK.quests.map((q,i)=>{
+    const now=Number(q.now||0), need=Number(q.need||1), ok=qDone(q);
+    const pc=Math.max(0,Math.min(100,Math.round(now/need*100)));
+    return `<div class="qrow">
+      <div class="qt">${qText(q)}</div>
+      <div class="qbar"><i style="width:${pc}%"></i></div>
+      <div class="qm">${Math.min(now,need)} / ${need} — reward 💎${q.gem}${q.pay?` + ${yen(q.pay)} yen`:""}</div>
+      ${ok?`<button class="sm go qgo" data-i="${i}" style="margin-top:6px">Collect</button>`:""}
+    </div>`;
+  }).join("")||'<p class="mdesc">No requests right now. One arrives every hour.</p>';
+  [...ql.querySelectorAll(".qgo")].forEach(b=>{ b.onclick=()=>questGo(Number(b.dataset.i)); });
+}
+async function dailyGo(){
+  if(TASK.busy)return; TASK.busy=true;
+  try{
+    let err=null;
+    const r=await netSeq(async()=>{ try{ return await NET.drv.dailyClaim(); }catch(e){ err=e; return null; } });
+    if(err)throw err;
+    if(r&&r.ok){
+      S.gems=(S.gems||0)+r.gems;
+      if(r.balance!=null)ledApply(r.balance);
+      say(`Daily reward 💎${r.gems}${r.cash?` and ${yen(r.cash)} yen`:""} (streak ${r.streak} days)`,r.cash||0,1);
+      flash(`💎${r.gems}  受け取りました`);
+    }
+    TASK.t=0; await taskSync(true); draw();
+  }catch(e){ flash(String((e&&e.message)||e).slice(0,40)); }
+  finally{ TASK.busy=false; }
+}
+async function questGo(i){
+  if(TASK.busy)return; TASK.busy=true;
+  try{
+    let err=null;
+    const r=await netSeq(async()=>{ try{ return await NET.drv.questClaim(i); }catch(e){ err=e; return null; } });
+    if(err)throw err;
+    if(r&&r.ok){
+      S.gems=(S.gems||0)+r.gems;
+      if(r.balance!=null)ledApply(r.balance);
+      say(`Request completed. 💎${r.gems}${r.cash?` and ${yen(r.cash)} yen`:""}`,r.cash||0,1);
+      flash("Request completed");
+    }
+    TASK.t=0; await taskSync(true); draw();
+  }catch(e){ flash(String((e&&e.message)||e).slice(0,40)); }
+  finally{ TASK.busy=false; }
+}
+/* ============ Tycoonsカード:引く · 持つ · 連れて歩く ============ */
+function cardState(){
+  if(!S.cards)S.cards={};      /* id → 枚数 */
+  if(!Array.isArray(S.team))S.team=[];
+  return S;
+}
+const cardLv=id=>{ cardState(); const n=S.cards[id]||0; return n<=0?0:Math.min(5,n); };
+const cardMul=id=>CKAKU[Math.max(0,cardLv(id)-1)];
+/* Taken alongpeopleの効果 Totalする.1の効果はmax +40% until */
+function cardEff(key){
+  cardState();
+  let v=0;
+  S.team.forEach(id=>{ const c=CBY[id]; if(!c||!c.e[key]||!cardLv(id))return;
+    v+=c.e[key]*cardMul(id); });
+  return Math.min(40,Math.round(v*10)/10)/100;
+}
+/* 1枚引く */
+function cardRoll(){
+  const r=Math.random();
+  const rar = r<CRATE[3] ? 3 : r<CRATE[3]+CRATE[2] ? 2 : 1;
+  const pool=CARDS.filter(c=>c.r===rar);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function cardGet(c){
+  cardState();
+  const had=S.cards[c.id]||0;
+  S.cards[c.id]=had+1;
+  if(!had&&S.team.length<CSLOT)S.team.push(c.id);   /* 初めてのpeopleは自動でTake along */
+  return had?"dup":"new";
+}
+function cardPull(n){
+  cardState();
+  const cost=n===10?CPULL10:CPULL;
+  if(S.gems<cost){ flash("Not enough 💎"); return; }
+  S.gems-=cost;
+  const got=[];
+  for(let i=0;i<n;i++){ const c=cardRoll(); got.push({c,k:cardGet(c)}); }
+  /* 10連は“Master”or higher 1people保証 */
+  if(n===10&&!got.some(g=>g.c.r>=2)){
+    const pool=CARDS.filter(x=>x.r===2);
+    const c=pool[Math.floor(Math.random()*pool.length)];
+    got[got.length-1]={c,k:cardGet(c)};
+  }
+  say(`Summoned ${n} tycoon(s) (💎${cost})`,0,1);
+  cardShowResult(got);
+  saveNow(); cloudSave(true); draw();
+}
+/* ---- 顔 描く(写真は使わない.全Partsこの関数 引いている線) ---- */
+function cardFace(c,size){
+  const L=c.look||{}, s=size||64;
+  const skin=L.skin||"#e8cdb0", hue=L.hue||"#888";
+  const hat = L.hat==="crown"
+      ? `<path d="M20 26 L26 14 L32 22 L38 12 L44 22 L50 14 L56 26 Z" fill="#e2b258" stroke="#7a5a1e"/>`
+    : L.hat==="top"
+      ? `<rect x="24" y="6" width="28" height="18" rx="2" fill="#2b2b33"/><rect x="18" y="23" width="40" height="4" rx="2" fill="#2b2b33"/>`
+    : L.hat==="cap"
+      ? `<path d="M20 26 q18 -18 36 0 z" fill="#3a3a46"/>`
+    : L.hat==="chon"
+      ? `<ellipse cx="38" cy="18" rx="13" ry="8" fill="#22222a"/><rect x="34" y="8" width="8" height="8" rx="3" fill="#22222a"/>`
+      : `<path d="M22 28 q16 -16 32 0 q-4 -14 -16 -14 q-12 0 -16 14 z" fill="#3a3038"/>`;
+  /* 口もand.ひげは顔 覆いすぎないよう at控えめ atする */
+  const mouth=`<path d="M34 47 q4 3 8 0" stroke="#8a6a60" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+  const beard = !L.beard ? mouth
+    : L.beard===1 ? `${mouth}<path d="M30 51 q8 6 16 0 q-2 8 -8 8 q-6 0 -8 -8 z" fill="#4a3f46"/>`
+    : L.beard===2 ? `<path d="M27 48 q11 14 22 0 q1 15 -11 17 q-12 -2 -11 -17 z" fill="#cfcfd6"/>
+                     <path d="M31 44 q7 3 14 0" stroke="#cfcfd6" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : L.beard===3 ? `<path d="M28 49 q10 12 20 0 q1 13 -10 15 q-11 -2 -10 -15 z" fill="#e6e6ec"/>
+                     <path d="M31 44 q7 3 14 0" stroke="#e6e6ec" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : `${mouth}<path d="M30 43 q8 4 16 0 q-3 4 -8 4 q-5 0 -8 -4 z" fill="#8a8a94"/>`;
+  return `<svg viewBox="0 0 76 76" width="${s}" height="${s}" aria-hidden="true">
+    <defs><clipPath id="cc${c.id}"><circle cx="38" cy="38" r="34"/></clipPath></defs>
+    <circle cx="38" cy="38" r="34" fill="${hue}22" stroke="${hue}" stroke-width="2"/>
+    <g clip-path="url(#cc${c.id})">
+      <rect x="0" y="52" width="76" height="24" fill="${hue}66"/>
+      <ellipse cx="38" cy="40" rx="15" ry="17" fill="${skin}"/>
+      <circle cx="32" cy="38" r="1.8" fill="#2a2028"/><circle cx="44" cy="38" r="1.8" fill="#2a2028"/>
+      ${beard}${hat}
+    </g></svg>`;
+}
+/* ---- 画面 ---- */
+let CTAB="pull";
+function cardDraw(){
+  cardState();
+  const box=$("cardbody"); if(!box)return;
+  $("cardgem").textContent=`Now 💎${yen(S.gems)}`;
+  if(CTAB==="pull"){
+    const rate=[3,2,1].map(r=>`${RNAME[r]} ${(CRATE[r]*100).toFixed(0)}%`).join(" ");
+    box.innerHTML=`
+      <p class="mdesc">Summon the great business figures of history. You can take  <b>${CSLOT}people</b>  with you.
+        Meeting the same person again raises their rank and strengthens the effect (up to ★5).</p>
+      <div class="acts" style="margin:10px 0 6px">
+        <button class="sm go" id="pull1">Summon 1 💎${CPULL}</button>
+        <button class="sm go" id="pull10">Summon 10 💎${CPULL10}</button>
+      </div>
+      <p class="hint" style="margin:2px 0 0">A Master or better is guaranteed in a 10-summon.</p>
+      <p class="hint" style="margin:6px 0 0">Rates  ${rate}</p>
+      <p class="hint" style="margin:6px 0 0;color:var(--faint)">
+        The figures are <b>estimates</b> that vary between historians. The portraits are drawn for this game; they are not photographs.</p>`;
+    $("pull1").onclick=()=>cardPull(1);
+    $("pull10").onclick=()=>cardPull(10);
+  }else if(CTAB==="book"){
+    const rows=[3,2,1].map(r=>{
+      const list=CARDS.filter(c=>c.r===r).map(c=>{
+        const lv=cardLv(c.id), on=S.team.indexOf(c.id)>=0;
+        const eff=Object.keys(c.e).map(k=>CEFF[k].f(Math.round(c.e[k]*cardMul(c.id)*10)/10)).join("/");
+        return `<div class="crow${lv?"":" off"}">
+          <div class="cface">${lv?cardFace(c,52):`<div class="cq">?</div>`}</div>
+          <div class="cinfo">
+            <div class="cn">${lv?c.n:"???"}<span class="cr" style="color:${RCOL[r]}">${RNAME[r]}</span></div>
+            <div class="cm">${lv?`${c.y} ${c.c}${c.w?` est. ${c.w} trillion yen`:""}`:"Not met yet"}</div>
+            ${lv?`<div class="cm" style="color:var(--gold)">${eff}</div>
+                 <div class="cm">${c.note}</div>`:""}
+          </div>
+          <div class="cact">${lv?`<div class="cstar">${"★".repeat(lv)}</div>
+            <button class="sm ${on?"go":""} cteam" data-id="${c.id}">${on?"Taken along":"Take along"}</button>`:""}</div>
+        </div>`;
+      }).join("");
+      return `<div class="d-t" style="margin:10px 0 5px;color:${RCOL[r]}">${RNAME[r]}</div>${list}`;
+    }).join("");
+    const have=CARDS.filter(c=>cardLv(c.id)).length;
+    box.innerHTML=`<p class="mdesc">Met <b>${have} / ${CARDS.length}</b> 
+      Taken along <b>${S.team.length} / ${CSLOT}</b></p>${rows}`;
+    [...box.querySelectorAll(".cteam")].forEach(b=>{ b.onclick=()=>cardTeam(b.dataset.id); });
+  }else{
+    const keys=Object.keys(CEFF);
+    box.innerHTML=`<p class="mdesc">What is in effect now. Each kind of effect caps at +40% in total.</p>
+      ${keys.map(k=>{ const v=Math.round(cardEff(k)*1000)/10;
+        return `<div class="qrow"><div class="qt">${CEFF[k].n}</div>
+          <div class="qm">${v?`<b style="color:var(--gold)">${CEFF[k].f(v)}</b>`:"none"}</div></div>`;}).join("")}
+      <div class="d-t" style="margin:12px 0 5px">T A K I N G   A L O N G</div>
+      ${S.team.length?S.team.map(id=>{const c=CBY[id];
+        return `<div class="crow"><div class="cface">${cardFace(c,44)}</div>
+          <div class="cinfo"><div class="cn">${c.n}</div>
+          <div class="cm">${"★".repeat(cardLv(id))} ${Object.keys(c.e).map(k=>CEFF[k].f(Math.round(c.e[k]*cardMul(id)*10)/10)).join("/")}</div></div>
+          <div class="cact"><button class="sm cteam" data-id="${id}">Remove</button></div></div>`;}).join("")
+        :'<p class="mdesc">You are not taking anyone along yet.</p>'}`;
+    [...box.querySelectorAll(".cteam")].forEach(b=>{ b.onclick=()=>cardTeam(b.dataset.id); });
+  }
+  ["pull","book","eff"].forEach(t=>{
+    const b=$("ctab_"+t); if(b)b.classList.toggle("on",CTAB===t);
+  });
+}
+function cardTeam(id){
+  cardState();
+  const i=S.team.indexOf(id);
+  if(i>=0)S.team.splice(i,1);
+  else{ if(!cardLv(id)){flash("You have not met them yet");return;}
+        if(S.team.length>=CSLOT){flash(`You can take along ${CSLOT} at most`);return;}
+        S.team.push(id); }
+  saveNow(); cardDraw(); draw();
+}
+function cardShowResult(got){
+  const box=$("cardbody");
+  const best=Math.max(...got.map(g=>g.c.r));
+  box.innerHTML=`<p class="mdesc">${best>=3?"<b style='color:var(--gold)'>You met a Legend</b>":
+      best>=2?"You met a Master":"You paid a visit"}</p>
+    <div class="cgot">${got.map(g=>`
+      <div class="cgotone" style="border-color:${RCOL[g.c.r]}">
+        ${cardFace(g.c,56)}
+        <div class="cn2">${g.c.n}</div>
+        <div class="cm2" style="color:${RCOL[g.c.r]}">${RNAME[g.c.r]}${g.k==="dup"?` · ★${cardLv(g.c.id)}`:" · first time"}</div>
+      </div>`).join("")}</div>
+    <div class="acts" style="margin-top:10px">
+      <button class="sm go" id="gotok">OK</button>
+    </div>`;
+  $("gotok").onclick=()=>{ CTAB="book"; cardDraw(); };
+}
+$("cardbtn").onclick=()=>{ CTAB="pull"; $("cardbox").classList.add("on"); cardDraw(); };
+$("cardclose").onclick=()=>$("cardbox").classList.remove("on");
+["pull","book","eff"].forEach(t=>{ $("ctab_"+t).onclick=()=>{ CTAB=t; cardDraw(); }; });
+
+$("taskbtn").onclick=()=>{ $("taskbox").classList.add("on"); taskDraw(); taskSync(true); };
+$("taskclose").onclick=()=>$("taskbox").classList.remove("on");
+$("acctmake").onclick=()=>acctOpen("make");
+$("acctlogin").onclick=()=>acctOpen("login");
+$("acctgo").onclick=acctGo;
+$("acctcancel").onclick=()=>$("acctbox").classList.remove("on");
+$("acctmail").onkeydown=e=>{ if(e.key==="Enter")$("acctpass").focus(); };
+$("acctpass").onkeydown=e=>{ if(e.key==="Enter")acctGo(); };
+
+/* 定期のおGuards:進行 預け,Requests もらう */
+setInterval(()=>{ cloudSave(false); taskSync(false); },60000);
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="hidden"){ cloudSave(true); }
+  else { taskSync(true); }
+});
+window.addEventListener("pagehide",()=>{ cloudSave(true); });
+
+/* ---- ホーム画面 atGive ---- */
+let INSTALL=null;
+window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); INSTALL=e; drawInstall(); });
+function drawInstall(){
+  let b=$("installbtn");
+  if(!INSTALL){ if(b)b.remove(); return; }
+  if(!b){
+    b=document.createElement("button"); b.id="installbtn"; b.className="sm go";
+    b.textContent="Add to home screen";
+    b.style.cssText="width:100%;margin:0 0 12px";
+    b.onclick=async()=>{ const p=INSTALL; INSTALL=null; b.remove();
+      try{ p.prompt(); await p.userChoice; }catch(_){} };
+    const card=$("infobox").querySelector(".mcard");
+    card.insertBefore(b,$("acctinfo"));
+  }
+}
+if("serviceWorker" in navigator && location.protocol==="https:"){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
 $("ptclose").onclick=()=>$("ptbox").classList.remove("on");
 $("gemx").onclick=()=>$("gembox").classList.remove("on");
 $("docx").onclick=()=>$("docbox").classList.remove("on");
@@ -5298,7 +5945,8 @@ function newChar(o){
     jail:0,rooms:{bed:1,sto:1,vau:1,stu:1},
     pos:{bed:[0,0],sto:[2,0],vau:[0,2],stu:[2,2]},queue:null,build:null,
     sel:-1,selRoom:"bed",log:[],over:false,pane:"map",
-    auc:null,aucLog:[],buff:{},ptUsed:{},dm:{},contracts:[],credit:50,ctab:"town",dmOpen:null,doneN:0});
+    auc:null,aucLog:[],buff:{},ptUsed:{},dm:{},contracts:[],credit:50,ctab:"town",dmOpen:null,doneN:0,
+    cards:{},team:[]});
   S.tech={}; TECHS.forEach(t=>S.tech[t.id]=0); ITECHS.forEach(t=>S.tech[t.id]=0);
   S.market=initMarket(); S.book=initBook(); S.orders=[]; S.npcs=makeNpcs();
   Object.keys(SITES).forEach(i=>{SITES[i].owner=null;});
@@ -5315,7 +5963,7 @@ function hardReset(){
   say("Moved to town. Cash 5,000 yen",0,1);
   draw(); flash("Starting over"); openName();
 }
-/* 入るtown 決めて,そのtownの自 min 出す(居なければ作る) */
+/* Sign intown 決めて,そのtownの自 min 出す(居なければ作る) */
 function enterTown(to){
   const nm=S.name, tt=S.tut;
   if(TOWN!==to){ saveNow(); TOWN=to; }          /* Nowの自 min しまってfrom移る */
