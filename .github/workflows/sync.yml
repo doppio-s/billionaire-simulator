@@ -1,0 +1,60 @@
+# サーバーに置いてある本体を、この置き場にも写しておく。
+#
+# ここ（GitHub Pages）は「予備の置き場」。ふだんは index.html（入口）が
+# サーバーから本体を読みに行くので出番はないが、サーバーに行けない時だけ
+# ここの full.html が使われる。だから中身が古いままだと、その時だけ
+# 古い版が出てしまう。それを防ぐために、定期的に写す。
+#
+# 手で動かす時： Actions タブ → この仕事 → Run workflow
+name: 本体をサーバーから写す
+
+on:
+  workflow_dispatch:            # ボタンで動かせる
+  schedule:
+    - cron: "17 */6 * * *"      # 6時間ごと
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: サーバーから取ってくる
+        env:
+          SB: https://cyrqnamvghjdwrrtdiog.supabase.co/rest/v1/rpc/web_get
+          KEY: sb_publishable_k7yH1S8exErs95du4whl6Q_JX-rkqdA
+        run: |
+          set -euo pipefail
+          mkdir -p en
+          get () {
+            echo "取得中: $1 → $2"
+            curl -sS --fail --retry 3 --retry-delay 5 -X POST "$SB" \
+              -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"p_path\":\"$1\"}" | jq -j '.body' > "$2.tmp"
+            # 中身が本物か確かめてから置き換える。壊れた物で上書きしない
+            if [ ! -s "$2.tmp" ]; then echo "空だった"; exit 1; fi
+            if [ "$(wc -c < "$2.tmp")" -lt 100000 ]; then echo "小さすぎる"; exit 1; fi
+            head -c 40 "$2.tmp" | grep -qi '<!doctype html' || { echo "HTMLではない"; exit 1; }
+            grep -q 'supabase' "$2.tmp" || { echo "サーバーの設定が入っていない"; exit 1; }
+            mv "$2.tmp" "$2"
+            echo "  ok $(wc -c < "$2") バイト"
+          }
+          get index.html full.html
+          get en.html    en/index.html
+
+      - name: 変わっていたら記録する
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add full.html en/index.html
+          if git diff --staged --quiet; then
+            echo "変わっていないので、何もしない"
+          else
+            git commit -m "本体をサーバーの最新版に合わせた"
+            git push
+            echo "更新した"
+          fi
