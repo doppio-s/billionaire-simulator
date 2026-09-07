@@ -3,7 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>億万長者シミュレーター</title>
+<title>社畜シミュレーター</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#151011">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="非ドパガキ向け。街の端のボロ家から日銭を稼ぎ、土地を買い、会社を興す。同じ街に住んでいるのは、本物の他のプレイヤーです。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="社畜シミュレーター">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="社畜シミュレーター">
+<meta property="og:description" content="非ドパガキ向け。みんなで一つの街。">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 html,body{margin:0;height:100%;background:#0b0d12;color:#e8e2d6;overflow:hidden;
  font-family:"Yu Gothic UI","Hiragino Kaku Gothic ProN",Meiryo,system-ui,sans-serif}
@@ -23,9 +38,17 @@ html,body{margin:0;height:100%;background:#0b0d12;color:#e8e2d6;overflow:hidden;
 </style>
 </head>
 <body>
-<div id="s"><div class="dot"></div><b>億万長者シミュレーター</b><p>本体を読み込んでいます…</p></div>
+<div id="s"><div class="dot"></div><b>社畜シミュレーター</b><p>本体を読み込んでいます…</p></div>
 <iframe id="f" hidden allow="autoplay; fullscreen; clipboard-write"></iframe>
 <script>
+/* ホーム画面に入れられるようにする受付係を登録する。
+   置いてあるだけでは何も起きないので、ここから呼ぶ。
+   file:// で開いた時は使えないので、その時は黙って諦める */
+if("serviceWorker" in navigator && location.protocol.indexOf("http")===0){
+  addEventListener("load",function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
 /* 本体はサーバー（Supabase）に置いてある。ここはそれを読みに行くだけの薄い1枚。
    版だけ先に聞いて、変わっていなければ前に読んだものをそのまま使う（通信を使わない）。
    サーバーに行けない時は、前に読んだもの → 予備の置き場、の順で粘る。 */
@@ -73,7 +96,15 @@ function load(lang){
   var first=(cur===null);
   if(first){ s.hidden=false; f.hidden=true; }
   var c=cacheGet();
-  var late=setTimeout(function(){ if(busy){ busy=0; back(lang,first,"時間がかかりすぎました"); } },25000);
+  /* 機内モードなどで最初から繋がっていない時は、25秒待たせない。
+     前に読んだものがあるなら、すぐそれを出す */
+  if(navigator.onLine===false && c && c.lang===lang && c.body){
+    busy=0; show(lang,c.ver,c.body); toast("通信が切れています。前の版で遊べます");
+    addEventListener("online",function(){ if(!busy)load(lang); },{once:true});
+    return;
+  }
+  var late=setTimeout(function(){ if(busy){ busy=0; back(lang,first,"時間がかかりすぎました"); } },
+    navigator.onLine===false?3000:25000);
   rpc("web_ver",{p_path:PATH[lang]})
     .then(function(ver){
       if(c && c.lang===lang && c.ver && c.ver===ver && c.body){
