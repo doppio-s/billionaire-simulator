@@ -194,6 +194,9 @@ body{
 .dot{position:absolute; width:4px; height:4px; border-radius:50%; background:var(--gold);
   opacity:.9; animation:roam 6s ease-in-out infinite alternate}
 .dot.b{background:var(--teal); animation-duration:8s}
+/* 📋 の上 at出す印.地図の点(.dot)andは別物なので,動かさず角 at置く */
+.info .dot{position:absolute; top:-1px; right:-1px; width:9px; height:9px;
+  background:var(--red); border:1.5px solid var(--bg); opacity:1; animation:none}
 @keyframes roam{from{transform:translate(0,0)}to{transform:translate(14px,9px)}}
 .yardbar{display:flex; justify-content:space-between; align-items:center; gap:8px;
   font-size:10.5px; color:var(--faint); padding:6px 2px 0}
@@ -728,8 +731,8 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
     <div class="mtitle">Wage Slave Simulator <span style="font-size:11px;color:var(--faint)" id="infover"></span></div>
     <p class="mdesc">Pick a name, then start with a part-time job at the shop nearby. Working costs stamina; food restores it.
       💎skips waiting (30every1). Housing runsLv1-20(shack → Flat → mansion → mansion), and
-      Lv5for a role,Lv6companies unlock. At the auction house you bid against the other residents.
-      Your first house sits on the edge, rent free.Lv6you move to a rented flat near the centre, and rent is taken automatically each week. If you cannot pay, it becomes debt.
+      Lv6で役職and企業 解禁.Auction House:他residentandAucり合えます.
+      Your first house sits on the edge, rent free.Lv7でthe centre近くのFlat to移るandrent  wごand at自動で引かれ,払えないanddebt atなります.
       Move (Lv5→6 · 10→11 · 15→16) is a gamble that costs half your net worth. Cash in hand is a target at night, so bank it (deposits are never taken).
       On the Trade tab, the board carries <b>only orders from real people</b>. Townsfolk trade with you only as shops (Market and Wholesale).
       For cash now, go to Wholesale; to sell high, list on the board and wait for a buyer.
@@ -836,7 +839,7 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
 <div class="modal" id="clsbox">
   <div class="mcard">
     <div class="mtitle">Choose a role</div>
-    <p class="mdesc">housing Lv5 . From here you choose one path. It cannot be changed later.</p>
+    <p class="mdesc">housing Lv6 . From here you choose one path. It cannot be changed later.</p>
     <div id="clslist"></div>
   </div>
 </div>
@@ -852,10 +855,12 @@ const TIERS=[
   {n:"Grand Mansion",  roof:"grand",   lot:[6,5], zone:"rich"}
 ];
 const MAXHLV=20;
-const tierOf=lv=>Math.min(3,Math.floor((lv-1)/5));
+/* 家の格.Lv1-6 は同じShackのまま育てられる(Move不要).
+   Lv7 で初めてFlat to移る.最初の目標  Lv6  at置くため */
+const tierOf=lv=>lv<=6?0:Math.min(3,Math.floor((lv-2)/5));
 const hName=lv=>`${TIERS[tierOf(lv)].n} Lv${lv}`;
-/* rent:The edgeのShack(Lv1-5)はただ.Lv6fromthe centre近くの貸しFlat at移り,rent 発生する */
-const hRent=lv=>(lv<=5||(typeof NET!=="undefined"&&NET.on))?0:Math.round(24000*Math.pow(1.33,lv-1)/50)*50;
+/* rent:The edgeのShack(Lv1-6)はただ.Lv7fromthe centre近くのFlat at移り,rent 発生する */
+const hRent=lv=>(lv<=6||(typeof NET!=="undefined"&&NET.on))?0:Math.round(24000*Math.pow(1.33,lv-1)/50)*50;
 /* Rebuild:Lv1→2 は 800 · 30min.上 at行くほど高く,長い(工期はmax4d) */
 const hUpCost=lv=>Math.round(24000*Math.pow(1.62,lv-1)/50)*50;
 const hUpTime=lv=>Math.min(5760,Math.round(10*Math.pow(1.65,lv-1)));   /*  min */
@@ -864,13 +869,13 @@ const RTIME=[10,40,150,480,1440];            /* Room Lv1→5 の工期( min) */
 const ROOMS=[
   {id:"bed",n:"Bedroom",ic:"🛏",e:l=>`Stamina cap ${100+l*20}`,base:200},
   {id:"sto",n:"Store",ic:"🧺",e:l=>`Food storage ${[0,3,6,12,24,48][l]} pcs`,base:150},
-  {id:"vau",n:"Vault",ic:"🔒",e:l=>`Protected from theft ${[0,2000,15000,80000,400000,2000000][l].toLocaleString("ja-JP")} yen`,
+  {id:"vau",n:"Vault",ic:"🔒",e:l=>`Protected from theft ${[0,40000,300000,1600000,8000000,40000000][l].toLocaleString("ja-JP")} yen`,
    base:250},
   {id:"stu",n:"Study",ic:"📚",e:l=>`Research slots ${1+Math.floor(l/2)}`,base:350}
 ];
 const G=8;                       /* plotは8×8cells */
 const PLOT=2;                    /* Roomは2×2cells */
-/* homeのplotはhousingレベルandandも at広 る */
+/* Homeのplotはhousingレベルandandも at広 る */
 const landW=lv=>Math.min(8,3+Math.floor(lv/2));
 /* Tech:序盤は安くて効果も控えめ.上 at行くほど高く,効く */
 const TCOST=[150,450,1300,3800,10000];          /* Lv1→5 のResearch費 */
@@ -1054,7 +1059,7 @@ const FIRMS={
 const UNLOCK={farm:6,forest:6,food:6,mat:6,guard:6,mine:6,steel:9,part:9,diner:9,logi:9,auto:11,whol:11};
 const FIRMLOCK=lv=>lv<6?[]:Object.keys(FIRMS).filter(k=>UNLOCK[k]<=lv);
 /* Partner:物 動かす atはLogistics Firm,AskBid atはWholesaler 要る.
-   operatorのFreight CenterandWholesale Marketは誰でも使える ,The worst terms in town. */
+   OperatorのFreight CenterandWholesale Marketは誰でも使える ,The worst terms in town. */
 const OPT={
   logi:{n:"Freight Center (operator)",fee:.20,cap:60,delay:120,op:1},
   whol:{n:"Wholesale Market (operator)",    buy:.65,sell:1.40,cap:1e9,op:1}
@@ -1065,7 +1070,7 @@ const MAXWORK=lv=>Math.min(12,2+Math.floor(lv/2));
 const matNeed=lv=>lv<5?0:Math.round(Math.pow(1.45,lv-5)*2);
 const HOUSEPRICE={boro:1200000,apart:3600000,mansion:12000000,lux:48000000,grand:200000000};
 const RENT_RATE=0.02, LOAN_RATE=0.03;
-const CEIL=1.5;                              /* operator — buy itandきはof market1.5 xuntil */
+const CEIL=1.5;                              /* Operator — buy itandきはof market1.5 xuntil */
 const RAW=["crop","stone","ore","wood","food"]; /* The operator always sells it品.それ以外はSomeone 作ってon the shelf出さないand買えない */
 function canBuy(gk,n){ const m=S.market[gk]; return RAW.includes(gk)||(m.stock||0)>=n; }
 /* 板 at並ぶ品(mealはShopで出すので板 atは載せない) */
@@ -1170,7 +1175,7 @@ function assignCity(){
     .filter(o=>o.p.dis==="bank"||o.p.dis==="comm")
     .sort((a,b)=>Math.hypot(a.p.x-WCOL/2,a.p.y-WROW/2)
                 -Math.hypot(b.p.x-WCOL/2,b.p.y-WROW/2));
-  /* the centreは主要な建物だけ:bank · Auction House · operatorのFreight CenterandWholesale Market · Operator Company · The School · Shop · Market · Diner,leftはtownのcompany */
+  /* the centreは主要な建物だけ:bank · Auction House · OperatorのFreight CenterandWholesale Market · Operator Company · The School · Shop · Market · Diner,leftはtownのCompany */
   near.forEach((o,k)=>{
     kinds[o.i]= k===0?"bank" : k===1?"auction" : k===2?"oplogi" : k===3?"opwhol" : k===4?"corp" : k===5?"school"
       : (k===6||k===11)?"shop" : (k===8||k===14)?"mkt" : k===7?"diner" : "pcco";
@@ -1179,7 +1184,7 @@ function assignCity(){
   const byCenter=(a,b)=>Math.hypot(a.p.x+a.p.w/2-WCOL/2,a.p.y+a.p.h/2-WROW/2)-Math.hypot(b.p.x+b.p.w/2-WCOL/2,b.p.y+b.p.h/2-WROW/2);
   const mres=PLOTS.map((p,i)=>({p,i})).filter(o=>kinds[o.i]==="npc"&&o.p.w>=4&&o.p.h>=3).sort(byCenter)[0];
   RESERVED.mansion=mres?mres.i:-1;
-  /* townのcompany 最低14Co置く(the centre at近い,広めの区画from) */
+  /* townのCompany 最低14Co置く(the centre at近い,広めの区画from) */
   let nco=kinds.filter(k=>k==="pcco").length;
   const cand=PLOTS.map((p,i)=>({p,i})).filter(o=>kinds[o.i]==="npc"&&o.p.w>=4&&o.i!==RESERVED.mansion).sort(byCenter);
   for(const o of cand){ if(nco>=14)break; kinds[o.i]="pcco"; nco++; }
@@ -1225,7 +1230,7 @@ function pickMyLots(){
   return out;
 }
 const MYLOT=pickMyLots();
-/* 初心者のため at,homeのすぐ隣 atPart-time先(Shop) 置く.それ以外の主要な建物はthe centre atある.
+/* 初心者のため at,Homeのすぐ隣 atPart-time先(Shop) 置く.それ以外の主要な建物はthe centre atある.
    ここは全員 最初 at来る場所なので,まわりのfreeぶんだけ大きくして,遠くfromでも minかる目印 atする.
    新しく来たpeopleの家も,このShop 囲むよう at配る(claimable()  見よ). */
 const START_SHOP=(function(){
@@ -1290,7 +1295,7 @@ const stopName=i=>PLOTS[i]&&PLOTS[i].name||"";
    初心者の村.地図の外周(the centrefrom38cellsor higher)は新入り's land.
    ShopandBus stop 4sites at置き(最初のShop 含めて,the centrefrom見て90度おき),
    そのShopの10cells以内“村”.新しく来たpeopleは村 at,Shop at近い所from順 atSign in.
-   村のhouseは最初fromEmpty lot(住peopleはいない).どの端末でも同じ答え atなるよう,乱数は使わない
+   村のHouseは最初fromEmpty lot(住peopleはいない).どの端末でも同じ答え atなるよう,乱数は使わない
    ========================================================= */
 const VILLAGE_R=10;
 const VILLAGES=(function(){
@@ -1306,7 +1311,7 @@ const VILLAGES=(function(){
     let best=-1,bs=1e9;
     PLOTS.forEach((p,i)=>{
       if(KINDS[i]!=="npc"||MYLOT.includes(i)||dCenter(p)<38)return;
-      /* 村 atなる広さ:まわり10cells athouse 6 housesor higher */
+      /* 村 atなる広さ:まわり10cells atHouse 6 housesor higher */
       const nb=PLOTS.filter((q,j)=>j!==i&&KINDS[j]==="npc"&&dist(i,j)<=VILLAGE_R).length;
       if(nb<6)return;
       let da=Math.abs(ang(i)-want); da=Math.min(da,Math.PI*2-da);
@@ -1356,7 +1361,7 @@ const PROPS=(()=>{
 })();
 
 /* ---------- 屋根の描画(plot at合わせて伸縮) ---------- */
-/* 見 minけやすさの基本:operatorの施設は青,townのcompanyは緑,Shopは橙,houseは茶-灰,Sitesは土and草.
+/* 見 minけやすさの基本:Operatorの施設は青,townのCompanyは緑,Shopは橙,Houseは茶-灰,Sitesは土and草.
    施設 atは大きな一文字の看板 置く */
 const PAL={
   op:{yard:"#1E2633",yl:"#2C3849",body:"#4B6283",line:"#26334A",hi:"#8AA6CF",glyph:"#F3F7FD",badge:"#2B3B57"},
@@ -1368,9 +1373,9 @@ const CAT={bank:"op",auction:"op",oplogi:"op",opwhol:"op",school:"op",corp:"op",
   farm:"site",mine:"site",forest:"site",MINE:"home",forsale:"home",vacant:"home",bus:"bus",player:"pl",
   lot:"lot",myland:"home",land:"pl"};
 const PILL={op:"#2F4C78",co:"#2E6A5A",shop:"#8A4A22",site:"#4C6A2C",home:"#8A6A1E",bus:"#6A4A8A",pl:"#8A3E5A",lot:"#4A5A46"};
-const LEGEND=[["op","operator"],["co","company"],["shop","Shop"],["site","Sites"],["bus","Bus stop"],["home","home"],["pl","Others"],["lot","Empty lot"]];
+const LEGEND=[["op","Operator"],["co","Company"],["shop","Shop"],["site","Sites"],["bus","Bus stop"],["home","Home"],["pl","Others"],["lot","Empty lot"]];
 const legendHTML=()=>LEGEND.map(([c,n])=>`<span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${PILL[c]};vertical-align:-1px;margin:0 3px 0 6px"></span>${n}`).join("")
-  +`<span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#6B5344;vertical-align:-1px;margin:0 3px 0 6px"></span>house`;
+  +`<span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#6B5344;vertical-align:-1px;margin:0 3px 0 6px"></span>House`;
 function roof(kind,x,y,w,h,opt){
   const g=[]; opt=opt||{};
   const px=f=>x+w*f, py=f=>y+h*f, pw=f=>w*f, ph=f=>h*f;
@@ -1473,7 +1478,7 @@ function roof(kind,x,y,w,h,opt){
     g.push(`<rect x="${px(.70)}" y="${py(.76)}" width="${pw(.09)}" height="${ph(.05)}" rx="2" fill="#B0453A"/>`);
     g.push(`<rect x="${px(.82)}" y="${py(.76)}" width="${pw(.09)}" height="${ph(.05)}" rx="2" fill="#2E3C5A"/>`);
   }
-  /* ---------- operatorの施設(青) ---------- */
+  /* ---------- Operatorの施設(青) ---------- */
   else if(kind==="bank"){                   /* bank:柱の並ぶ正面,vaultの丸,看板“Bank” */
     yard(OP.yard,OP.yl);
     const bx=px(.05),by=py(.05),bw=pw(.90),bh=ph(.90);
@@ -1543,7 +1548,7 @@ function roof(kind,x,y,w,h,opt){
     g.push(`<circle cx="${bx+bw*.9}" cy="${by+bh*.1}" r="${Math.min(bw,bh)*.06}" fill="#828A8D" stroke="#A9B2B5"/>`);
     sign(bx+bw*.5,by+bh*.58,Math.min(bw,bh)*.20,"Op",OP);
   }
-  /* ---------- townのcompany(緑):業種の一文字 ---------- */
+  /* ---------- townのCompany(緑):業種の一文字 ---------- */
   else if(kind==="pcco"){
     yard(CO.yard,CO.yl);
     const bx=px(.05),by=py(.06),bw=pw(.90),bh=ph(.88);
@@ -1834,8 +1839,8 @@ function tick(){
           say(`${TIERS[tierOf(S.hlv)].n}went back to`,0,1); }
       }
     }
-    if(S.bank>0&&lv("tou")){const it=Math.round(S.bank*tEff("tou"));
-      S.bank+=it; say("Interest on deposits",it);}
+    if(S.bank>0){const it=Math.round(S.bank*(BANK_RATE+tEff("tou")));
+      if(it>0){S.bank+=it; say("Interest on deposits",it);}}
   }
   if(big)draw(); else drawLive();
 }
@@ -1903,7 +1908,7 @@ const cost=(r,l)=>Math.round(r.base*Math.pow(2.0,l)/50)*50;
 const rTime=l=>RTIME[Math.min(l,RTIME.length-1)];
 const pick=(arr,i)=>arr[Math.max(0,Math.min(arr.length-1,i|0))];   /* 表fromはみ出しても壊れない */
 const storeCap=()=>pick([0,3,6,12,24,48],rl("sto"));
-const vaultAmt=()=>pick([0,2000,15000,80000,400000,2000000],rl("vau"));
+const vaultAmt=()=>pick([0,40000,300000,1600000,8000000,40000000],rl("vau"));
 const studySlots=()=>1+Math.floor(rl("stu")/2);
 const npcAt=i=>S.npcs.find(n=>n.i===i);
 /* ============ 土地 ============
@@ -1922,7 +1927,7 @@ function newsText(k,p,fallback){
     if(k==="join")  return `${who} arrived in town (lot #${p.plot})`;
     if(k==="house") return `${who}'s home reached Lv${p.hlv}`;
     if(k==="firm")  return `${who} founded a company`;
-    if(k==="class") return `${who} reached Lv5 and chose a calling`;
+    if(k==="class") return `${who}   Lv6  at届き,生き方 選んだ`;
     if(k==="bank")  return `The bank has put new lots up for sale`;
   }catch(_){}
   return clean(fallback,120);
@@ -1995,7 +2000,7 @@ function landsApply(rows){
 }
 /* まわりの主要な建物.値段の理由 ,買う前 at見せる */
 const BIGNAME={auction:"Auction House",mkt:"Market",bank:"bank",opwhol:"Wholesale Market",oplogi:"Freight Center",
-  school:"The School",bus:"Bus stop",corp:"Operator Company",shop:"Shop",diner:"Diner",pcco:"company"};
+  school:"The School",bus:"Bus stop",corp:"Operator Company",shop:"Shop",diner:"Diner",pcco:"Company"};
 function nearBig(i,r){
   const p=PLOTS[i], out=[];
   PLOTS.forEach((q,j)=>{ if(j===i||!BIGNAME[KINDS[j]])return;
@@ -2052,7 +2057,7 @@ function burglaryTick(){
   const kept=Math.min(S.cash+take,vaultAmt());
   say(`Broken into in the night (the vault kept ${yen(kept)}was kept safe)`,-take,1);
   flash(`Broken into −${yen(take)} yen`);
-  chatPush("",`${S.name||"you"}was ransacked`,"sys");
+  chatPush("",`${S.name||"Your"} place was ransacked`,"sys");
 }
 function hireGuard(){
   const co=guardCo(); const nm=co?co.name:"Guard Firm";
@@ -2120,15 +2125,25 @@ function gemHeal(){
   S.gems-=c; S.hp=hpMax(); say(`💎${c}restores all stamina`,0,1);
   flash("Stamina fully restored"); tutStep("gem"); draw();
 }
-function bankMove(){
+/* Interest on deposits. w at一度つく.ごくわずか(Research“Investment”でここ at上乗せされる) */
+const BANK_RATE=0.002;
+let BANKAMT=0;
+function bankPut(n){
+  n=Math.min(Math.max(0,Math.floor(n||0)),S.cash);
+  if(n<=0){flash("Enter an amount to deposit");return;}
   if(!spend(1,"bank"))return;
-  if(S.bank>0){const a=S.bank;S.bank=0;S.cash+=a;say("Withdrawn from the bank",0);}
-  else{if(S.cash<=0)return;const a=S.cash;S.cash=0;S.bank+=a;say("Deposited at the bank",0);}
-  draw();
+  S.cash-=n; S.bank+=n; say("Deposited at the bank",-n); flash(`${yen(n)} yen 預けた`); draw();
 }
-/* Move (格 上 る Lv5→6 · 10→11 · 15→16)は賭け:of net worth半 min 払う.
+function bankTake(n){
+  n=Math.min(Math.max(0,Math.floor(n||0)),S.bank);
+  if(n<=0){flash("Enter an amount to withdraw");return;}
+  if(!spend(1,"bank"))return;
+  S.bank-=n; S.cash+=n; say("Withdrawn from the bank",n); flash(`${yen(n)} yen 引き出した`); draw();
+}
+function bankMove(){ if(S.bank>0)bankTake(S.bank); else bankPut(S.cash); }
+/* Move (格 上 る Lv5→6 · 10→11 · 15→16)は賭け:of net worthHalf 払う.
    払った minは戻らない.rent 上 り,4 w滞納するand前の家 at戻される */
-/* 純資産:現金 · Deposits · Carandcompanyandproperty · In handの品 · 自CoStock · 板 atYour open ordersuntil数える
+/* 純資産:現金 · Deposits · CarandCompanyandproperty · In handの品 · 自CoStock · 板 atYour open ordersuntil数える
    (物 at換えてMove費 安くする,andいう抜け道 ふさぐ) */
 const invValue=()=>{let v=S.food*(S.market.food?S.market.food.price:0);
   Object.entries(S.inv||{}).forEach(([k,q])=>{ if(S.market[k])v+=S.market[k].price*q; }); return v;};
@@ -2141,8 +2156,8 @@ const escValue=()=>{ if(!S.book)return 0; let v=0;
   return v;};
 const netWorth=()=>Math.max(0,S.cash+S.bank+assetValue()+invValue()+firmStockValue()+escValue()-S.loan.amt-S.debt);
 const isMove=lv=>tierOf(lv+1)>tierOf(lv);
-/* homeの区画.オンライン: tenthsり当てられた1区画,オフライン:段ごandの MYLOT.
-   ここ以外で MYLOT  homeandして使うand,家 2つあるよう at見えてしまう */
+/* Homeの区画.オンライン: tenthsり当てられた1区画,オフライン:段ごandの MYLOT.
+   ここ以外で MYLOT  Homeandして使うand,家 2つあるよう at見えてしまう */
 const myHome=()=>(typeof NET!=="undefined"&&NET.on&&S.netPlot!=null)?S.netPlot:MYLOT[tierOf(HLV())];
 /* オンライン:家は自 min's landの上 at建つ.上の段(Flat · mansion · Grand Mansion) at上 る atは,
    その広さ's land at住んでいるNeeded ある.向きはどちらでもよい */
@@ -2243,6 +2258,13 @@ function finishBuild(){
   if(S.build.id==="__house"){
     const before=tierOf(S.hlv); S.hlv++;
     say(`housing Lv${S.hlv} done`,0,1); tellTown("house");
+    /* 建て替えるたび at祝い金 出る.上の階ほど大きい.
+       払った額の3 tenths 戻り,💎も付く.上 った手ごたえ その場でRepayため */
+    { const back=Math.round(hUpCost(S.hlv-1)*0.3/100)*100, gem=1+Math.floor(S.hlv/3);
+      if(back>0){ S.cash+=back; say(`Rebuild bonus`,back,1); }
+      S.gems=(S.gems||0)+gem;
+      flash(`Lv${S.hlv}  reached  +${yen(back)} yen 💎${gem}`);
+      if(NET.on)ledFlush().catch(()=>{}); }
     if(tierOf(S.hlv)>before){
       if(NET.on){
         /* 自 min's landの上で建て替わる.場所は動かない */
@@ -2255,8 +2277,8 @@ function finishBuild(){
         flash(`${TIERS[tierOf(S.hlv)].n}moved to`);
       }
     }
-    if(S.hlv===5&&!S.cls)setTimeout(openClass,300);
-    if(S.hlv===6)say(NET.on?`Reached Lv6: you can now found a company`:`Lv6 : companies unlock. From here, weekly ${yen(hRent(6))}in rent begins`,0,1);
+    if(S.hlv===6&&!S.cls)setTimeout(openClass,300);
+    if(S.hlv===6)say(`Lv6 reached: roles and founding a company are unlocked`,0,1);
     S.build=null; return;
   }
   const r=ROOMS.find(x=>x.id===S.build.id);
@@ -2374,8 +2396,8 @@ function zoom(f){
 const lotRect=i=>{const p=PLOTS[i];
   return {x:p.x*CELL,y:p.y*CELL,w:p.w*CELL,h:p.h*CELL};};
 function kindAt(i){
-  /* オンライン:,homeは“ tenthsり当てられた1区画”だけ.
-     オフライン用の MYLOT  Here混ぜるand,home 2つあるよう at見えてしまう */
+  /* オンライン:,Homeは“ tenthsり当てられた1区画”だけ.
+     オフライン用の MYLOT  Here混ぜるand,Home 2つあるよう at見えてしまう */
   if(NET.on){
     if(i===S.netPlot)return "MINE";
     if(netPlayerAt(i))return "player";              /* ほかのPlayerの家 */
@@ -2398,8 +2420,8 @@ function nameAt(i){
   if(k==="lot")return "Empty lot";
   if(k==="myland")return "Your land";
   if(k==="land"){const l=landOf(i); return (l&&l.n?l.n:"Someone")+"'s land";}
-  if(k==="npc"){const n=npcAt(i); return n?n.name+"’s":"house";}
-  if(k==="pcco"){const co=coAt(i); return co?co.name:"company";}
+  if(k==="npc"){const n=npcAt(i); return n?n.name+"’s house":"House";}   /* 英語版: ○○'s house */
+  if(k==="pcco"){const co=coAt(i); return co?co.name:"Company";}
   if(k==="farm")return SITES[i]&&SITES[i].owner==="me"?"Your farm":"farmland";
   if(k==="mine")return SITES[i]&&SITES[i].owner==="me"?"Your mine":"mine";
   if(k==="forest")return SITES[i]&&SITES[i].owner==="me"?"Your forest":"Forest";
@@ -2530,9 +2552,9 @@ const TUT=[
    tab:"map", map:()=>tutShop(), sel:"#detail .btn.food1"},
   {id:"eat",      t:"Eating restores stamina. Without stamina you cannot work.",
    hint:"Press “Eat“", sel:"#eatbtn"},
-  {id:"cardtab",  t:"A short detour. In this town there is a place where you can call on people who made history.",
+  {id:"cardtab",  t:"Here you can borrow the power of figures from history",
    hint:"Tap 🎴 at the top right", sel:"#cardbtn"},
-  {id:"cardpull", t:"Tycoons and outlaws. The first one is free to call on.",
+  {id:"cardpull", t:"Each one does something different — pick the one that suits you",
    hint:()=>tutVisible(document.querySelector("#pull1"))?"Tap “Call on 1”":"Tap 🎴 at the top right",
    sel:["#pull1","#cardbtn"]},
   {id:"cardteam", t:"Someone you meet for the first time comes along with you. Their power works for you. Up to 3 companions.",
@@ -2554,8 +2576,31 @@ const TUT=[
    tab:"map", sel:"#detail .btn.up1", map:()=>myHome()},
   {id:"gembuild", t:"Building too💎finishes it now.",
    hint:"“💎 completes it now“", sel:"#rushbuild"},
-  {id:"done",     t:"That is everything. Work, eat, research, rebuild. Take the bus stop to the centre. Cash in hand is a target at night, so put it in the bank (always reachable from the foot of the Company tab).Lv5 unlocks a calling, Lv6 a company. For a bigger home, buy an empty lot and move there.",
-   hint:"", last:true}
+  {id:"banktab",  t:"Cash in hand can be put in the bank — burglars can't take it, and it even grows sometimes",
+   hint:"Press the Business tab", tab:"biz", tabOnly:true},
+  {id:"deposit",  t:"",
+   hint:"Tap “Deposit this amount”", tab:"biz", sel:".bankdep"},
+  {id:"tasktab",  t:"",
+   hint:"Tap 📋 at the top right", sel:"#taskbtn"},
+  {id:"dailyget", t:"",
+   hint:"Tap “Claim”", sel:"#dailygo"},
+  {id:"taskclose",t:"",
+   hint:"Tap “Close”", sel:"#taskclose"},
+  {id:"chatsay",  t:"This is where you talk to the people playing right now, and make contracts. Send something.",
+   hint:"Type something and tap “Send” — e.g. “glad it's this close”",
+   open:()=>{ S.ctab="town"; $("chatbar").classList.add("open"); },
+   sel:"#chatform"},
+  {id:"goal6",    t:"First, get your home up to Lv6",
+   hint:"", last:true},
+  /* ---- From hereDay 2章.housingLv6 at届いたpeople atだけ出る ---- */
+  {id:"cls6",     t:"You reached Lv6 — pick a way of life",
+   hint:"Tap one of them", gate:()=>HLV()>=6,
+   open:()=>{ if(!S.cls&&!$("clsbox").classList.contains("on"))openClass(); }, sel:"#clslist"},
+  {id:"loan6",    t:"Borrow the money for the training hall from the bank",
+   hint:"Tap the “Borrow” button", gate:()=>HLV()>=6, tab:"biz", sel:".borrow1"},
+  {id:"school6",  t:"Go to the training hall — courses here unlock more kinds of company",
+   hint:()=>tutVisible(document.querySelector("#detail .btn"))?"Tap “Open the Tech tab”":"Tap the highlighted training hall",
+   gate:()=>HLV()>=6, tab:"map", map:()=>tutSchool(), sel:"#detail .btn"},
 ];
 /* --------------------------------------------------------------
    もう済んでしまった手順は飛ばす.
@@ -2575,7 +2620,13 @@ const TUTDONE={
   upgrade: ()=>HLV()>1||!!S.build,         /* もうRebuildした/Work中 */
   research:()=>!!S.queue||TECHS.some(t=>lv(t.id)>0),
   eat:     ()=>S.hp>=hpMax()-1,            /* stamina 満タンならFoodべられない */
-  cardpull:()=>Object.keys(S.cards||{}).length>0||(!S.freePull&&S.gems<CPULL)
+  cardpull:()=>Object.keys(S.cards||{}).length>0||(!S.freePull&&S.gems<CPULL),
+  deposit: ()=>S.bank>0||S.cash<=0,           /* もう預けてある/預ける現金 none */
+  /* Collectボタン 出ないtown(オフライン)や,もう受け取った後で止まらないよう at */
+  dailyget:()=>$("taskbox").classList.contains("on")&&!document.querySelector("#dailygo"),
+  cls6:    ()=>!!S.cls,                       /* もう選んである */
+  /* 借りられない(Securityis short)people Here止めない */
+  loan6:   ()=>S.loan.amt>0||loanCap()-S.loan.amt<20000
 };
 function tutAuto(){
   let g=0, moved=false;
@@ -2590,11 +2641,17 @@ function tutAuto(){
 const tutOn =()=>S.tut<TUT.length;
 const tutCur=()=>TUT[S.tut];
 function tutShop(){
-  /* home atいちばん近いShop.村ごand atShop あるので,どの村のpeople atも“すぐ近く” atなる */
+  /* Home atいちばん近いShop.村ごand atShop あるので,どの村のpeople atも“すぐ近く” atなる */
   let best=-1,bd=1e9; const h=myHome();
   PLOTS.forEach((p,i)=>{ if(KINDS[i]!=="shop")return;
     const d=dist(h,i); if(d<bd){bd=d;best=i;} });
   return best>=0?best:START_SHOP;
+}
+function tutSchool(){
+  let best=-1,bd=1e9; const h=myHome();
+  PLOTS.forEach((p,i)=>{ if(KINDS[i]!=="school")return;
+    const d=dist(h,i); if(d<bd){bd=d;best=i;} });
+  return best>=0?best:myHome();
 }
 function tutStep(id){
   if(!tutOn())return;
@@ -2662,10 +2719,14 @@ function drawTut(){
     const m=$("tutmask"); if(m)m.classList.remove("on"); return; }
   box.style.display="block";
   const c=tutCur();
+  /* “ここuntil来たら続き”andいう手順.条 cases 揃うま:案内 出さない */
+  if(c.gate&&!c.gate()){ box.innerHTML=""; box.style.display="none";
+    const m2=$("tutmask"); if(m2)m2.classList.remove("on"); return; }
+  if(c.open)try{ c.open(); }catch(_){}
   box.innerHTML=`<div class="tut-h">
       <span class="tut-n">${S.tut+1} / ${TUT.length}</span>
       <button class="tut-x" id="tutx">Skip</button></div>
-    <div class="tut-t">${c.t}</div>
+    ${c.t?`<div class="tut-t">${c.t}</div>`:""}
     ${(typeof c.hint==="function"?c.hint():c.hint)?`<div class="tut-hint">👉 ${typeof c.hint==="function"?c.hint():c.hint}</div>`:""}
     ${c.last?`<button class="sm go" id="tutdone" style="margin-top:8px">Start</button>`:""}`;
   const x=$("tutx"); if(x)x.onclick=tutSkip;
@@ -2701,7 +2762,7 @@ function drawTut(){
   /* 地図の手順:,地図ぜんぶ:なく“押すべき建物”だけ 照らす */
   tutSpot(target, rect);
   /* 開いている窓(ガチャなど)の中 照らす時,案内の札 窓の中身 at重なる.
-     押す所 画面の下半 minなら札 上 at,上半 minなら下 at浮かせて,重ならないよう atする */
+     押す所 画面の下Halfなら札 上 at,上Halfなら下 at浮かせて,重ならないよう atする */
   {
     const modal=target?target.closest(".modal.on"):null;
     box.classList.toggle("float",!!modal);
@@ -2782,7 +2843,7 @@ function chatPush(name,text,kind){
 }
 /* Town chatで喋るのは実在のpeopleだけ.NPC atは喋らせない.
    peopleでないもの peopleのふり して混ざるand,誰and話しているのか minfromなくなる.
-   companyの募集だけは,operatorのお知らせandして流す(発言者は出さない) */
+   Companyの募集だけは,Operatorのお知らせandして流す(発言者は出さない) */
 function chatTick(){
   if(S.t<chatNext)return;
   chatNext=S.t+180+Math.random()*240;     /* 3-7 hours at一度だけ */
@@ -2840,6 +2901,7 @@ function initChat(){
     const v=($("chatinput").value||"").trim(); if(!v)return;
     $("chatinput").value="";
     chatPush(S.name||"you",v,"me");
+    tutStep("chatsay");
   };
 }
 
@@ -2928,7 +2990,7 @@ function drawMap(){
     const n=k==="npc"?npcAt(i):null;
     if(n&&n.guard>0&&VIEW.w<1400)for(let g2=0;g2<n.guard;g2++)
       s+=`<circle cx="${R2.x+11+g2*10}" cy="${R2.y+11}" r="3.6" fill="#D9553F"/>`;
-    /* 名札:施設は色つきの札で遠くfromでも minかる.houseは寄った時だけ */
+    /* 名札:施設は色つきの札で遠くfromでも minかる.Houseは寄った時だけ */
     const cat=CAT[k]||(k==="npc"?"npc":"home");
     if(cat==="npc"?VIEW.w<1100:VIEW.w<2100){
       const fs=Math.max(10,Math.min(15,VIEW.w/72)), name=nameAt(i), tx=R2.x+R2.w/2;
@@ -2981,14 +3043,14 @@ function drawDetail(){
 
   if(kind==="MINE"){
     const nextRent=(Math.floor(S.t/(DAY*7))+1)*DAY*7-S.t;
-    head("home",hName(HLV()),
+    head("Home",hName(HLV()),
       (NET.on&&S.netPlot!=null
         ?(()=>{ let mt=0; for(let k=3;k>=0;k--){ if(lotFits(S.netPlot,k)){mt=k;break;} }
             const cur=tierOf(HLV());
             return `Your own land (${PLOTS[S.netPlot].w}×${PLOTS[S.netPlot].h} cells), so no rent / This size can hold up to a ${TIERS[mt].n}`
               +(mt<=cur&&cur<3?`. A ${TIERS[cur+1].n} needs a bigger empty lot — buy one and move there`:""); })()
         :hRent(HLV())?`Weekly rent ${yen(hRent(HLV()))}(next in ${fmtMin(nextRent)} later - rented)`
-        :`No rent (edge of town; the centre is ${fmtMin(dist(S.at,KINDS.indexOf("bank"))*MIN_PER_CELL/vMul())})/ Lv6you move to a rented flat near the centre, and ${yen(hRent(6))}in rent begins`)
+        :`No rent (edge of town; the centre is ${fmtMin(dist(S.at,KINDS.indexOf("bank"))*MIN_PER_CELL/vMul())})/ Lv7でthe centre近くのFlat to移るand, w ${yen(hRent(7))}in rent begins`)
       +` / vault ${yen(vaultAmt())} yen`+
       (S.debt>0?`<br><span style="color:var(--red)">debt ${yen(S.debt)}(unpaid ${S.arrears}w)</span>`
         +`<br><span class="d-t">Rent is taken automatically; whatever is short becomes debt.4weeks running and your house1drops a level.</span>`:""));
@@ -3016,6 +3078,24 @@ function drawDetail(){
       ()=>{go("home");},"key wide");
     if(HLV()<MAXHLV)mkBtn(box,isMove(HLV())?"🚚":"⬆",isMove(HLV())?`Lv${HLV()+1} Move to (${TIERS[tierOf(HLV()+1)].n})`:`Lv${HLV()+1} Rebuild to`,
       upSub(),upgradeHouse,"key wide up1",!upOk());
+    /* short物 あるandき,どこ to行けばいいか 出す.
+       building materialは“trade”タブのAt the market買える.広い土地はEmpty lot 買って引っ越す */
+    { const need=matNeed(HLV()+1), short=need-(S.inv.mat||0);
+      if(short>0)mkBtn(box,"🧱","Go buy materials",
+        `still ${short}(on sale in the Trade tab — the market and the order book)`,()=>{ go("auc"); },"wide"); }
+    if(needLot(HLV())){
+      mkBtn(box,"🔍","Find a bigger empty lot",lotNeedText(HLV()),()=>{
+        const t=tierOf(HLV()+1);
+        const cand=PLOTS.map((q,i)=>i).filter(i=>kindAt(i)==="lot"&&lotFits(i,t))
+          .sort((a,b)=>landPx(a)-landPx(b));
+        if(!cand.length){ flash("nothing that size is for sale right now"); return; }
+        S.sel=cand[0]; centerOn(PLOTS[S.sel]); go("map"); draw();
+        flash(`${PLOTS[S.sel].w}×${PLOTS[S.sel].h} empty lot`);
+      },"wide");
+      const h2=document.createElement("p"); h2.className="hint";
+      h2.textContent="Bought the landら,そ's land 押して“ここ to引っ越す”.引っ越すかどうかは自由です.Nowの家のまuntilも構Nowせん.";
+      w.appendChild(h2);
+    }
     if(isMove(HLV())&&!NET.on){const p=document.createElement("p"); p.className="hint";
       p.textContent=`Moving is a gamble. Half of your net worth (cash, deposits, vehicle, company and property, less loans and debt, ${yen(netWorth())}), you pay half, and it does not come back. During the ${fmtMin(hUpTime(HLV()))} your things are boxed up, the vault is unusable, and the odds of being hit are1.8times (bank your cash). Where you land, the rent is  w${yen(hRent(HLV()+1))},4weeks unpaid and you are sent back.`; w.appendChild(p);}
   }else if(kind==="lot"||kind==="myland"||kind==="land"){
@@ -3146,7 +3226,7 @@ function drawDetail(){
       mkBtn(box,"🚌",`${stopName(i)} to`,pl.bus?`${fmtMin(pl.min)}  ·  freight ${yen(pl.fare)} yen`:`${fmtMin(pl.min)}  ·  Walk (${S.cash<busFare(dist(S.at,i))?"Not enough for the fare":"Walking is faster"})`,()=>begin("move",i,0,nameAt(i)),"",isBusy());});
   }else if(kind==="school"){
     head("The School","Industry know-how","Study here and you can found firms such as a steel mill or an auto plant. Research itself is on the Tech tab.");
-    mkBtn(box,"📚","Open the Tech tab","industry know-how can only be started while you are here",()=>go("tech"),"key wide");
+    mkBtn(box,"📚","Open the Tech tab","industry know-how can only be started while you are here",()=>{tutStep("school6"); go("tech");},"key wide");
   }else if(kind==="diner"){
     const m=S.market.meal, unit=Math.min(m.price,GOODS.meal.base*CEIL)*(cls()==="trader"?0.85:1);
     head("Diner","meal","Eating restores a lot of stamina and4 hours pay+5%."+(S.buff.meal>S.t?"(boosted)":""));
@@ -3185,7 +3265,7 @@ function drawDetail(){
       work,"key wide",isBusy()||S.hp<j.hp);
   }else{
     const n=npcAt(S.sel);
-    if(!n){head("house","—","Nobody lives here."); return;}
+    if(!n){head("House","—","Nobody lives here."); return;}
     const tn={boro:"Shack",apart:"Flat",mansion:"Flat",
               lux:"mansion",grand:"Grand Mansion"}[n.cls];
     const rate=Math.round(robRate(n)*100);
@@ -3552,7 +3632,15 @@ function rentIncome(){
   let tot=0; S.owned.forEach(i=>{const n=npcAt(i); if(n)tot+=Math.round(housePrice(n)*RENT_RATE);});
   return tot;
 }
-const assetValue=()=>VEHICLES[S.veh].cost+(hasFirm()?F().setup+(S.firm.trucks||0)*GOODS.truck.base*0.6+(S.firm.wh||0)*WH_COST*0.6:0)
+/* Homeand持っている土地もSecurity atなる.ここ Not givenand,CarもCompanyもnone Lv6 のpeopleは
+   Securityゼロで1 yenも借りられなかった.家は建てた費用の半額で見る(貸し倒れ対策) */
+function homeValue(){
+  let v=0; for(let l=1;l<HLV();l++)v+=hUpCost(l); v=Math.round(v/2);
+  try{ if(NET.on&&NET.id&&typeof LAND!=="undefined")
+    Object.keys(LAND).forEach(k=>{ if(LAND[k]&&LAND[k].o===NET.id)v+=landPx(+k); }); }catch(_){}
+  return v;
+}
+const assetValue=()=>VEHICLES[S.veh].cost+homeValue()+(hasFirm()?F().setup+(S.firm.trucks||0)*GOODS.truck.base*0.6+(S.firm.wh||0)*WH_COST*0.6:0)
   +S.owned.reduce((a,i)=>{const n=npcAt(i);return a+(n?housePrice(n):0);},0);
 
 /* ---- 融資 ---- */
@@ -3563,7 +3651,7 @@ function borrow(amt){
   if(amt<=0){flash("Not enough security (a vehicle, a company or property can stand as security)");return;}
   if(!spend(1,"loan"))return;
   S.loan.amt+=amt; S.cash+=amt;
-  say(`Borrowed from the bank`,amt,1); flash(`${yen(amt)}borrowed`); draw();
+  say(`Borrowed from the bank`,amt,1); flash(`${yen(amt)}borrowed`); tutStep("loan6"); draw();
 }
 function repay(amt){
   amt=Math.min(amt,S.loan.amt,S.cash);
@@ -3588,14 +3676,14 @@ function loanWeekly(){
   }else S.loan.weeks=0;
 }
 
-/* ---- 画面:companyタブ ---- */
+/* ---- 画面:Companyタブ ---- */
 /* =========================================================
-   companyのpeople事:Co名 · Hiring · 入Co条 cases · 応募 · Hired
+   Companyのpeople事:Co名 · Hiring · 入Co条 cases · 応募 · Hired
    townの他Co atも名前and条 cases あり,自 min 応募する側 atもなる
    ========================================================= */
 const SURNAMES=["Nanjo","Kuroki","Ichinose","Watanuki","Sakuma","Horii","Sakakibara","Omiya","Morishita","Taguchi","Takanashi","Saotome","Kujo","Saginuma","Takanashi","Kagari"];
 const FIRMWORD={farm:"Farm",mine:"Mining",forest:"Forestry",food:"Foods",mat:"building material",steel:"Steel",part:"Parts",auto:"Auto",diner:"Diner",guard:"Guard",logi:"freight",whol:"Trading"};
-/* townのNPC企業:pcco の区画 at一Coずつ.freightandWholesale売はPartner先の候補 atなる(本番:実Playerのcompany) */
+/* townのNPC企業:pcco の区画 at一Coずつ.freightandWholesale売はPartner先の候補 atなる(本番:実PlayerのCompany) */
 const NPCCO={};
 (function(){
   const ROT=["logi","whol","food","farm","auto","logi","whol","mat","steel","diner","guard","part","logi","whol","forest","mine"];
@@ -3605,10 +3693,10 @@ const NPCCO={};
     const type=ROT[k%ROT.length];
     const minLv=[1,3,6,8,11][k%5];
     /* 2 hoursshiftのpay.Part-timeは30 min3,000(=時給6,000 yen)なので,
-       company勤めはその2 x-5 x atなるよう at置く.ここ 上げ忘れていて,
-       家 建て替えてcompany atSign inほど貧しくなる作り atなっていた */
+       Company勤めはその2 x-5 x atなるよう at置く.ここ 上げ忘れていて,
+       家 建て替えてCompany atSign inほど貧しくなる作り atなっていた */
     const wage=Math.round((18000+minLv*3200+rnd()*6000)/500)*500;
-    const co={name:`${SURNAMES[(k*5+3)%SURNAMES.length]}${FIRMWORD[type]}`,type,minLv,wage,
+    const co={name:`${SURNAMES[(k*5+3)%SURNAMES.length]} ${FIRMWORD[type]}`,type,minLv,wage,
       minCls:(k%4===3)?["worker","trader","boss"][k%3]:null};
     /* freight · Wholesale売は“安くて並”“中”“高くて上等”の3段で並ぶ.上等ほどhousingレベルの条 cases 厳しい */
     const j=seen[type]||0; seen[type]=j+1;
@@ -3625,7 +3713,7 @@ const NPCCO={};
   });
 })();
 const coAt=i=>NPCCO[i];
-/* Partner先のList(operator+townのcompany).i=-1  operator */
+/* Partner先のList(Operator+townのCompany).i=-1  Operator */
 const partnerList=kind=>[{i:-1,name:OPT[kind].n,pt:OPT[kind]}]
   .concat(Object.entries(NPCCO).filter(([i,co])=>co.type===kind).map(([i,co])=>({i:+i,name:co.name,pt:co.pt})));
 const ptUsed=i=>{ if(S.ptUsed[i]==null)S.ptUsed[i]=(NPCCO[i]&&NPCCO[i].pt?NPCCO[i].pt.used0:0); return S.ptUsed[i]; };
@@ -3661,7 +3749,7 @@ function signPartner(kind,i){
   say(`${co.name}partnered (signing fee)`,-co.pt.sign,1); flash(`${co.name}partnered`);
   chatPush("",`${S.firm.name}   ${co.name} partnered with`,"sys"); draw();
 }
-/*  wNext:Partner先 toの会費.払えなければoperator at戻る */
+/*  wNext:Partner先 toの会費.払えなければOperator at戻る */
 function partnerWeekly(){
   if(!hasFirm()||!S.firm.pt)return;
   ["logi","whol"].forEach(kind=>{
@@ -3671,7 +3759,7 @@ function partnerWeekly(){
     else{S.firm.pt[kind]={k:"op"}; say(`${co.name}lapsed: the dues went unpaid`,0,1); flash(`${co.name}partnership ended`);}
   });
 }
-/* dNext:townのcompanyのslotsは他の客で埋まったり空いたりする */
+/* dNext:townのCompanyのslotsは他の客で埋まったり空いたりする */
 function partnerDaily(){
   Object.entries(NPCCO).forEach(([i,co])=>{ if(!co.pt)return; i=+i;
     const mine=hasFirm()&&S.firm.pt&&["logi","whol"].some(k=>S.firm.pt[k].k==="npc"&&S.firm.pt[k].i===i);
@@ -3679,7 +3767,7 @@ function partnerDaily(){
       S.ptUsed[i]=Math.max(0,Math.min(co.pt.slots-(mine?1:0),u));}
   });
 }
-/* 自 minのcompanyの1dのFreight quota */
+/* 自 minのCompanyの1dのFreight quota */
 const shipCap=()=>ptOf("logi").cap;
 const shipLeft=()=>Math.max(0,shipCap()-(S.firm.shipToday||0));
 function canJoin(co){
@@ -3741,7 +3829,7 @@ function fireWorker(k){
 /* ---- Output · dNext(skill 反映) ---- */
 function hireWorker(){ toggleListing(); }
 
-/* ---- 画面:companyタブ ---- */
+/* ---- 画面:Companyタブ ---- */
 function siteFree(kind){
   return Object.entries(SITES).filter(([i,s])=>s.kind===kind&&!s.owner).map(([i])=>+i);
 }
@@ -3787,7 +3875,7 @@ function foundFirm(type){openFound(type);}
 
 /* ---- Buy in:WholesalerfromBid,Logistics Firm Freightぶ.
    wholesaleは“market×Wholesaleの x率”,freightは“Goodsの値段×Fee”.Freight quota 使い,届くuntil hours かかる ---- */
-const inUnit=gk=>S.market[gk].price*ptOf("whol").sell;               /* companyのBuy inUnit price */
+const inUnit=gk=>S.market[gk].price*ptOf("whol").sell;               /* CompanyのBuy inUnit price */
 function buyInput(gk,n){
   const m=S.market[gk], g=GOODS[gk];
   if(!canBuy(gk,n)){flash(`${g.n}on the shelf${Math.floor(m.stock||0)}on the shelf. Nobody can make it but a producer`);return;}
@@ -3861,7 +3949,7 @@ function firmTick(dt){
   }
 }
 function npcSupply(){
-  /* townのcompany 作った物 on the shelf並ぶ.本番:これ 実PlayerのPosted atなる */
+  /* townのCompany 作った物 on the shelf並ぶ.本番:これ 実PlayerのPosted atなる */
   Object.values(NPCCO).forEach(co=>{
     const f=FIRMS[co.type]; if(!f||(!f.out&&!f.lines))return;
     const outs=f.lines?{bike:1,moto:1,truck:1,car:1}:f.out;
@@ -3869,10 +3957,10 @@ function npcSupply(){
       m.stock=(m.stock||0)+Math.max(1,Math.round(GOODS[k].demand*0.7));});
   });
 }
-/* ---- Logistics Firm · WholesalerのShop売:townのcompany 客 atなる(本番:実Playerのcompany) ---- */
+/* ---- Logistics Firm · WholesalerのShop売:townのCompany 客 atなる(本番:実PlayerのCompany) ---- */
 const svcCap=()=>{ const f=F(), b=SVCBASE[f.svc];
   return Math.round((firmSkill()*b.unit+(f.svc==="logi"?(S.firm.trucks||0)*b.truck:(S.firm.wh||0)*b.wh))*firmBoost(S.firm.type)); };
-/* 客 atなりうるcompany:物 作るcompany.Freightぶ量andUnit priceは業種で決まる */
+/* 客 atなりうるCompany:物 作るCompany.Freightぶ量andUnit priceは業種で決まる */
 function svcCandidates(){
   return Object.entries(NPCCO).filter(([i,co])=>{const f=FIRMS[co.type]; return f&&(f.out||f.lines);}).map(([i,co])=>{
     const f=FIRMS[co.type]; const gk=f.lines?"bike":co.type==="diner"?"food":Object.keys(f.out)[0]; const g=GOODS[gk];
@@ -4045,7 +4133,7 @@ function roomFor(gk){
   if(gk==="food")return Math.max(0,storeCap()-S.food);
   return 9999;
 }
-/* Freightぶ手当て.companyならFreight quotaandfreight,personalは手でFreightべる minだけ */
+/* Freightぶ手当て.CompanyならFreight quotaandfreight,personalは手でFreightべる minだけ */
 function shipFor(gk,q){
   if(!hasFirm()){ if(q>HAND_CAP){flash(`Without a companyonce ${HAND_CAP}each trip (what you can carry)`);return null;} return {fee:0}; }
   if(shipLeft()<q){flash(`Not enough freight quota today ( ${shipLeft()})`);return null;}
@@ -4190,7 +4278,7 @@ function ordSync2(){
 
 /* =========================================================
    番付(Net worthランキング)and💎Shop.
-   townresident · townのcompany · 自 min 同じ物差しで並べる.上 見て追う仕組み.
+   townresident · townのCompany · 自 min 同じ物差しで並べる.上 見て追う仕組み.
    ========================================================= */
 function coValue(i,co){
   const f=FIRMS[co.type]||{setup:200000};
@@ -4199,8 +4287,8 @@ function coValue(i,co){
 }
 function ranking(){
   const list=[];
-  S.npcs.forEach(n=>list.push({n:n.name+"’s",t:"house",v:n.cash+(HOUSEPRICE[n.cls]||0)}));
-  Object.entries(NPCCO).forEach(([i,co])=>list.push({n:co.name,t:FIRMS[co.type]?FIRMS[co.type].n:"company",v:coValue(+i,co)}));
+  S.npcs.forEach(n=>list.push({n:n.name+"’s",t:"House",v:n.cash+(HOUSEPRICE[n.cls]||0)}));
+  Object.entries(NPCCO).forEach(([i,co])=>list.push({n:co.name,t:FIRMS[co.type]?FIRMS[co.type].n:"Company",v:coValue(+i,co)}));
   list.push({n:(S.name||"you"),t:hasFirm()?`${F().n}of`:hName(HLV()),v:Math.round(netWorth()),me:1});
   list.sort((a,b)=>b.v-a.v);
   list.forEach((x,i)=>{x.r=i+1;});
@@ -4246,7 +4334,7 @@ function openGemShop(){
   const fw=document.createElement("div"); fw.className="detail";
   if(online){
     fw.innerHTML=`<div class="d-h"><span class="d-n">🎁 Daily reward</span><span class="d-t">grows with streaks</span></div>
-      <div class="d-b">Collect it from 📋 above. It grows the more days you come — day 7 gives 💎12 and 30,000 yen.</div>`;
+      <div class="d-b">Claim it from 📋 above. It grows the more days in a row you come: cash on day 3 and day 5, and 💎12 + 600,000 yen on day 7.</div>`;
     const fa=document.createElement("div"); fa.className="acts"; fw.appendChild(fa);
     mkBtn(fa,"📋","Go collect","Daily reward",()=>{ box.classList.remove("on"); $("taskbox").classList.add("on"); taskDraw(); taskSync(true); },"key wide");
   }else{
@@ -4300,7 +4388,7 @@ function contacts(){
     sub:`Player  ·  housingLv${p.hlv}${NET.isHere(p)?"  ·  Now居ます":""}`,
     plot:p.plot,kind:"player",rich:Math.max(20000,p.worth)}));
   Object.entries(NPCCO).forEach(([i,co])=>out.push({id:"c"+i,name:co.name,
-    sub:(FIRMS[co.type]||{}).n||"company",plot:+i,kind:"co",co,rich:(FIRMS[co.type]||{setup:400000}).setup*6}));
+    sub:(FIRMS[co.type]||{}).n||"Company",plot:+i,kind:"co",co,rich:(FIRMS[co.type]||{setup:400000}).setup*6}));
   const home=PLOTS[myHome()];
   S.npcs.slice().sort((a,b)=>{
     const pa=PLOTS[a.i],pb=PLOTS[b.i];
@@ -4850,7 +4938,7 @@ function tabId(){
   return id;
 }
 
-/* 入居できる区画(houseandして置かれていて,自 minplot for saleでないもの) */
+/* 入居できる区画(Houseandして置かれていて,自 minplot for saleでないもの) */
 function claimable(){
   /* 村ごand at,Shop at近い所from埋める.people townじゅう at散らばるand,誰 atも会えなNowま終わってしまう.
      一つの村 埋まってfromNext村 to.村 全Parts埋まったら,leftのEmpty lot Shop at近い順 */
@@ -5527,7 +5615,7 @@ function mktApply(m){
   });
 }
 function bankApply(b){ if(b)Object.assign(BANK,b); }
-/* companyのStockfromIn hand to移す.Server 見るのはIn handだけなので,板 at出す前 atNeeded */
+/* CompanyのStockfromIn hand to移す.Server 見るのはIn handだけなので,板 at出す前 atNeeded */
 function pullFromFirm(gk,n){
   const need=n-(S.inv[gk]||0);
   if(need>0&&hasFirm()&&(S.firm.stock[gk]||0)>0){
@@ -5577,7 +5665,7 @@ function netTrades(rows){
 const netPostAsk=(gk,p,q)=>netSeq(()=>_netPostAsk(gk,p,q));
 async function _netPostAsk(gk,p,q){
   p=cleanQ(p); q=cleanQ(q); if(!p||!q){flash("Enter a price and a quantity");return;}
-  pullFromFirm(gk,q);                        /* companyのStockは一度In hand atしてfrom出す */
+  pullFromFirm(gk,q);                        /* CompanyのStockは一度In hand atしてfrom出す */
   await _invFlush();
   const have=syncGood(gk)?invHave(gk):haveOf(gk); q=Math.min(q,have);
   if(q<1){flash("Nothing in hand");return;}
@@ -5620,7 +5708,7 @@ async function _netCancel(gk,side,idx){
   }catch(e){ flash("could not cancel"); }
   draw();
 }
-/* ---- Shop(operatorのMarket · Wholesale).値段はServer Save.the house pursefrom払われる ---- */
+/* ---- Shop(OperatorのMarket · Wholesale).値段はServer Save.the house pursefrom払われる ---- */
 const cleanQ=q=>{ q=Math.floor(Number(q)); return Number.isFinite(q)&&q>0?q:0; };
 const netShopBuy =(gk,q)=>netSeq(()=>_netShop("buy",gk,q));
 const netShopSell=(gk,q)=>netSeq(()=>_netShop("sell",gk,q));
@@ -5683,7 +5771,7 @@ async function _netTake(gk,side,qty){
   draw();
 }
 
-/* ---- 画面:companyタブ(OutputParts min) ---- */
+/* ---- 画面:Companyタブ(OutputParts min) ---- */
 function drawProduction(B){
   const f=F(), cap=MAXWORK(HLV());
   const w=document.createElement("div"); w.className="detail";
@@ -5762,7 +5850,7 @@ function openPartners(kind){
     const t=Object.assign({},p.pt); if(kind==="logi"&&p.i>=0)t.fee=Math.max(0.02,t.fee-iEff("butu")/4);
     const d=document.createElement("div"); d.className="detail";
     d.innerHTML=`<div class="d-h"><span class="d-n">${p.name}${isCur?" <span class='d-t' style='color:var(--gold)'>Current partner</span>":""}</span>
-        <span class="d-t">${p.i<0?"operator":`slots ${co.pt.slots}Co  ·  ${full?"<span style='color:var(--red)'>full</span>":`free ${co.pt.slots-ptUsed(p.i)}`}`}</span></div>
+        <span class="d-t">${p.i<0?"Operator":`slots ${co.pt.slots}Co  ·  ${full?"<span style='color:var(--red)'>full</span>":`free ${co.pt.slots-ptUsed(p.i)}`}`}</span></div>
       <div class="d-b">${ptTermText(kind,t)}${p.i<0?"<br><span style='color:var(--red)'>The worst terms in town, open to anyone</span>":`<br>Signing fee ${yen(co.pt.sign)} yen / Weekly dues ${yen(co.pt.week)} yen / Requirement: housing Lv${co.pt.minLv} or higher`}</div>`;
     const a=document.createElement("div"); a.className="acts"; d.appendChild(a);
     const why=isCur?"Signed":p.i<0?"You can always go back":HLV()<co.pt.minLv?`housing Lv${co.pt.minLv} needed (now Lv${HLV()})`:full?"Full. Wait a day and one may open up":S.cash<co.pt.sign?"Not enough for the signing fee":`Signing fee ${yen(co.pt.sign)}paid`;
@@ -5887,7 +5975,7 @@ function drawBiz(){
   drawStaff(B);
   drawEstate(B);
 }
-/* company 畳む.of the founding cost3 tenths 戻り,Staff atはSeverance 払う.Sitesはfree at戻る */
+/* Company 畳む.of the founding cost3 tenths 戻り,Staff atはSeverance 払う.Sitesはfree at戻る */
 function closeFirm(){
   const back=Math.round(F().setup*0.3), sev=S.firm.workers.reduce((a,w)=>a+w.wage*2,0);
   if(S.cash+back<sev){flash(`Severance for the staff ${yen(sev)} yen is short`);return;}
@@ -5977,7 +6065,7 @@ function drawEstate(B){
   }
   drawBankPanel(B);
 }
-/* companyタブの下 at常 atbank 置く:どこ atいてもBorrow · Repay · 預ける · Withdraw */
+/* Companyタブの下 at常 atbank 置く:どこ atいてもBorrow · Repay · 預ける · Withdraw */
 function drawBankPanel(B){
   const h=document.createElement("div"); h.className="d-t"; h.style.margin="14px 0 6px";
   h.textContent="Bank (any time)"; B.appendChild(h);
@@ -5986,15 +6074,33 @@ function drawBankPanel(B){
   w.innerHTML=`<div class="rows">
       <div class="row"><span class="k">Deposits</span><span class="v">${yen(S.bank)} yen</span></div>
       <div class="row"><span class="k">Loan (weekly3%)</span><span class="v ${S.loan.amt>0?"neg":""}">${yen(S.loan.amt)} yen</span></div>
-      <div class="row"><span class="k">Security value</span><span class="v">${yen(assetValue())}(vehicle, company, property)</span></div>
+      <div class="row"><span class="k">Security value</span><span class="v">${yen(assetValue())} yen (home, land, vehicle, company, property)</span></div>
       <div class="row"><span class="k">You can still borrow</span><span class="v">${yen(cap)} yen</span></div>
     </div>`;
   B.appendChild(w);
+  /* いくら預けるか · Withdrawか 選べる.全額しか選べないand,
+     手元 atFood費も残さず預けてしまう */
+  const amt=document.createElement("div"); amt.className="detail"; amt.style.marginTop="8px";
+  amt.innerHTML=`<div class="d-h"><span class="d-n">Choose an amount</span>
+      <span class="d-t">weekly rate ${(BANK_RATE*100).toFixed(1)}%${lv("tou")?`+Research ${(tEff("tou")*100).toFixed(1)}%`:""}</span></div>
+    <input id="bankamt" class="minput" type="number" inputmode="numeric" min="0" step="1000"
+      value="${BANKAMT||Math.max(0,S.cash)}" style="width:100%;margin:6px 0 0">
+    <div class="chips" id="bankchips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>`;
+  B.appendChild(amt);
+  const inp=amt.querySelector("#bankamt"), chips=amt.querySelector("#bankchips");
+  inp.oninput=()=>{BANKAMT=Math.max(0,Math.floor(+inp.value||0));};
+  const chip=(label,fn)=>{ const c=document.createElement("button"); c.className="sm"; c.style.padding="4px 10px";
+    c.textContent=label; c.onclick=()=>{BANKAMT=Math.max(0,Math.floor(fn())); inp.value=BANKAMT; }; chips.appendChild(c); };
+  chip("10k",()=>10000); chip("100k",()=>100000); chip("Half",()=>S.cash/2);
+  chip("All cash",()=>S.cash); chip("All savings",()=>S.bank);
   const box=document.createElement("div"); box.className="acts"; B.appendChild(box);
-  mkBtn(box,"🏦",S.bank>0?"Withdraw it all":"Deposit it all",S.bank>0?`${yen(S.bank)} yen`:"Deposits are never taken",bankMove,"",S.bank<=0&&S.cash<=0);
-  mkBtn(box,"💴","10,000 yen Borrow","Half the value of your security",()=>borrow(10000),"",cap<1000);
-  mkBtn(box,"💴","Borrow to the limit",`${yen(cap)} yen`,()=>borrow(cap),"",cap<1000);
-  mkBtn(box,"↩","Repay (10,000 yen)",`left ${yen(S.loan.amt)} yen`,()=>repay(10000),"",S.loan.amt<=0||S.cash<1);
+  mkBtn(box,"🏦","Deposit this amount",`In hand ${yen(S.cash)} yen`,()=>bankPut(BANKAMT||S.cash),"bankdep",S.cash<=0);
+  mkBtn(box,"🏧","Withdraw this amount",`Deposits ${yen(S.bank)} yen`,()=>bankTake(BANKAMT||S.bank),"",S.bank<=0);
+  mkBtn(box,"🏦","Deposit it all",S.cash>0?`${yen(S.cash)} yen`:"Deposits are never taken",()=>bankPut(S.cash),"",S.cash<=0);
+  mkBtn(box,"🏧","Withdraw it all",S.bank>0?`${yen(S.bank)} yen`:"",()=>bankTake(S.bank),"",S.bank<=0);
+  mkBtn(box,"💴",`${yen(Math.min(200000,cap))} yen Borrow`,"Half the value of your security",()=>borrow(200000),"borrow1",cap<20000);
+  mkBtn(box,"💴","Borrow to the limit",`${yen(cap)} yen`,()=>borrow(cap),"",cap<20000);
+  mkBtn(box,"↩","Repay (200,000)",`left ${yen(S.loan.amt)} yen`,()=>repay(200000),"",S.loan.amt<=0||S.cash<1);
   mkBtn(box,"↩","Repay it all","",()=>repay(S.loan.amt),"wide",S.loan.amt<=0||S.cash<1);
   const p=document.createElement("p"); p.className="hint"; p.style.margin="8px 0 0";
   p.textContent="Borrowing against security of9per cent for2weeks running, property→then the vehicle, are seized.";
@@ -6118,7 +6224,7 @@ function loadSlot(){
   return false;
 }
 loadSlot();
-say("Moved to town. Cash 2,000 yen",0,1);
+say(`Moved to town. Cash ${yen(S.cash)} yen`,0,1);
 /* --- 名前and役職 --- */
 /* 名前 空のまま“始める” 押すpeople 4 tenthsいた.“Nameless”だand誰fromも呼べず,
    people いるtownなの at一peopleで遊んでいるのand同じ atなる.だfrom最初from候補 入れておく */
@@ -6157,7 +6263,7 @@ function openClass(){
     const b=document.createElement("button"); b.className="clsopt";
     b.innerHTML=`<span class="ci">${c.ic}</span>
       <span><span class="cn">${c.n}</span><br><span class="cd">${c.d}</span></span>`;
-    b.onclick=()=>{S.cls=c.id; box.classList.remove("on");
+    b.onclick=()=>{S.cls=c.id; box.classList.remove("on"); tutStep("cls6");
       say(`The role “${c.n}“ chosen`,0,1); flash(`${c.n} became`); tellTown("class"); draw();};
     list.appendChild(b);
   });
@@ -6426,6 +6532,8 @@ async function acctSwitch(){
 /* ---- Daily rewardand,1 hoursごandのRequests ---- */
 const TASK={daily:null,quests:[],next:null,t:0,busy:false};
 const DAILY_GEM=[2,3,4,5,6,8,12];
+/* 3d目 · 5d目 · 7d目は現金も出る.2d目 at来ない問題 toの手当て */
+const DAILY_CASH=[0,0,50000,0,150000,0,600000];
 async function taskSync(force){
   if(!SRV()||!S.name)return;
   if(!force&&Date.now()-TASK.t<45000)return;
@@ -6441,7 +6549,10 @@ async function taskSync(force){
 const qDone=q=>Number(q.now||0)>=Number(q.need||0);
 function taskDot(){
   const d=$("taskdot"); if(!d)return;
-  d.hidden=!((TASK.daily&&TASK.daily.ready)||TASK.quests.some(qDone));
+  /* 受け取れる物 あるandき.加えて,まだ一度も開いていないpeople atは出しておく.
+     チュートリアル 終わったleft“Next at何 するか”の置き場 ここ atあるこand ,
+     文章 足さず at知らせるため */
+  d.hidden=!((TASK.daily&&TASK.daily.ready)||TASK.quests.some(qDone)||(!S.taskSeen&&!tutOn()));
 }
 function qText(q){
   if(q.k==="own"){ const g=GOODS[q.good]; return `Stock up <b>${q.need}</b> × ${g?g.ic+g.n:q.good}`; }
@@ -6449,6 +6560,20 @@ function qText(q){
   if(q.k==="hlv")  return `Raise your home level by <b>1</b>`;
   if(q.k==="trade")return `Trade with someone on the order book <b>once</b>`;
   return q.txt||"Requests";
+}
+/* 序盤のはっきりした目標.Lv6 ま:“Next at何 すればいいか” 1本 at絞って出す.
+   Lv6 で企業 解禁されるので,そこ 最初のゴール atする */
+function goalHtml(){
+  const h=HLV(); if(h>=6)return "";
+  const cost=upCost(h), have=S.cash+S.bank;
+  return `<div class="dcard" style="margin-bottom:10px">
+    <div style="font-size:13px"><b>Goal: get your home to Lv6</b>
+      <span style="color:var(--faint)">Lv6 lets you start a company</span></div>
+    <div class="dstreak">${[1,2,3,4,5,6].map(i=>
+      `<span class="${i<=h?"on":""}">Lv${i}</span>`).join("")}</div>
+    <div style="font-size:12px;margin-top:4px">Next rebuild <b>Lv${h+1}</b> ${yen(cost)} yen
+      <span style="color:var(--faint)">${have>=cost?"you can afford it":`still ${yen(cost-have)} yen`}</span></div>
+  </div>`;
 }
 function taskDraw(){
   const db=$("dailybox"), ql=$("questlist"), qn=$("questnote");
@@ -6460,12 +6585,12 @@ function taskDraw(){
   const d=TASK.daily;
   if(d){
     const st=d.ready?d.next:d.streak;
-    db.innerHTML=`<div class="dcard">
+    db.innerHTML=goalHtml()+`<div class="dcard">
       <div style="font-size:13px">${d.ready?`Today's reward is ready`:`Today's reward has been collected`}
         <span style="color:var(--faint)"> (streak ${d.streak} d目 / total ${d.total} d)</span></div>
       <div class="dstreak">${DAILY_GEM.map((g,i)=>
-        `<span class="${(i+1)<=st?"on":""}">${i+1}d<br>💎${g}</span>`).join("")}</div>
-      ${d.ready?`<button class="sm go" id="dailygo" style="width:100%;margin-top:6px">💎${DAILY_GEM[d.next-1]}  — collect${d.next===7?"(+30,000 yen)":""}</button>`
+        `<span class="${(i+1)<=st?"on":""}">${i+1}d<br>💎${g}${DAILY_CASH[i]?`<br>${Math.round(DAILY_CASH[i]/10000)}万`:""}</span>`).join("")}</div>
+      ${d.ready?`<button class="sm go" id="dailygo" style="width:100%;margin-top:6px">💎${DAILY_GEM[d.next-1]}  — collect${DAILY_CASH[d.next-1]?`+${yen(DAILY_CASH[d.next-1])} yen`:""}</button>`
                :`<div style="font-size:11px;color:var(--faint);margin-top:4px">Comes back when the date changes. Miss a day and the streak returns to day 1.</div>`}
     </div>`;
     if(d.ready)$("dailygo").onclick=dailyGo;
@@ -6497,6 +6622,7 @@ async function dailyGo(){
       if(r.balance!=null)ledApply(r.balance);
       say(`Daily reward 💎${r.gems}${r.cash?` and ${yen(r.cash)} yen`:""} (streak ${r.streak} days)`,r.cash||0,1);
       flash(`Received 💎${r.gems}`);
+      tutStep("dailyget");
     }
     TASK.t=0; await taskSync(true); draw();
   }catch(e){ flash(String((e&&e.message)||e).slice(0,40)); }
@@ -6696,8 +6822,8 @@ $("cardbtn").onclick=()=>{ CTAB="pull"; $("cardbox").classList.add("on"); cardDr
 $("cardclose").onclick=()=>{ $("cardbox").classList.remove("on"); tutStep("cardteam"); };
 ["pull","book","eff"].forEach(t=>{ $("ctab_"+t).onclick=()=>{ CTAB=t; cardDraw(); }; });
 
-$("taskbtn").onclick=()=>{ $("taskbox").classList.add("on"); taskDraw(); taskSync(true); };
-$("taskclose").onclick=()=>$("taskbox").classList.remove("on");
+$("taskbtn").onclick=()=>{ S.taskSeen=1; $("taskbox").classList.add("on"); taskDraw(); taskSync(true); tutStep("tasktab"); };
+$("taskclose").onclick=()=>{ $("taskbox").classList.remove("on"); tutStep("taskclose"); taskDot(); };
 $("acctmake").onclick=()=>acctOpen("make");
 $("acctlogin").onclick=()=>acctOpen("login");
 $("acctgo").onclick=acctGo;
@@ -6760,7 +6886,9 @@ if(!S.name){ npcSupply(); npcSupply(); }   /* Shopの棚 初dfrom満たしてお
 /* まっさらな住people 作る.o.name / o.tut  渡すand引き継ぐ(オンラインの自 min 作るandき at使う) */
 function newChar(o){
   o=o||{};
-  Object.assign(S,{t:0,real:Date.now(),cash:5000,bank:0,food:1,hp:55,hlv:1,gems:8,freePull:1,job:"part",firm:null,
+  /* 初期の所持金.インフレの時 atここだけ 5,000 のまま残っていた.
+     新しく作ったpeople  5,000 yen from始まってしまう(Serverは 100,000 yen で用意しているの at) */
+  Object.assign(S,{t:0,real:Date.now(),cash:100000,bank:0,food:1,hp:55,hlv:1,gems:8,freePull:1,job:"part",firm:null,
     name:"",cls:null,tut:0,debt:0,arrears:0,chat:[],
     owned:[],loan:{amt:0,weeks:0},inv:{},
     veh:0,busy:null,jobAt:null,guardTo:0,guardAuto:false,robbed:0,
@@ -6782,7 +6910,7 @@ function hardReset(){
   try{localStorage.removeItem(saveKey());}catch(_){}
   newChar({});
   go("map"); centerOn(PLOTS[S.at]);
-  say("Moved to town. Cash 5,000 yen",0,1);
+  say(`Moved to town. Cash ${yen(S.cash)} yen`,0,1);
   draw(); flash("Starting over"); openName();
 }
 /* Sign intown 決めて,そのtownの自 min 出す(居なければ作る) */

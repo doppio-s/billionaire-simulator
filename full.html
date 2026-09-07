@@ -194,6 +194,9 @@ body{
 .dot{position:absolute; width:4px; height:4px; border-radius:50%; background:var(--gold);
   opacity:.9; animation:roam 6s ease-in-out infinite alternate}
 .dot.b{background:var(--teal); animation-duration:8s}
+/* 📋 の上に出す印。地図の点（.dot）とは別物なので、動かさず角に置く */
+.info .dot{position:absolute; top:-1px; right:-1px; width:9px; height:9px;
+  background:var(--red); border:1.5px solid var(--bg); opacity:1; animation:none}
 @keyframes roam{from{transform:translate(0,0)}to{transform:translate(14px,9px)}}
 .yardbar{display:flex; justify-content:space-between; align-items:center; gap:8px;
   font-size:10.5px; color:var(--faint); padding:6px 2px 0}
@@ -728,8 +731,8 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
     <div class="mtitle">社畜シミュレーター <span style="font-size:11px;color:var(--faint)" id="infover"></span></div>
     <p class="mdesc">名前を決めて、近所の商店でバイトから。働くと体力が減り、食料で戻ります。
       💎は待ち時間を飛ばす石（30分ごとに1個）。住居はLv1〜20（ボロ家 → マンション → 豪邸 → 大豪邸）で、
-      Lv5で役職、Lv6で企業が解禁。競売所では他の住人と競り合えます。
-      最初の家は街の端っこで家賃なし。Lv6で中心近くの貸しマンションへ引っ越すと家賃が週ごとに自動で引かれ、払えないと負債になります。
+      Lv6で役職と企業が解禁。競売所では他の住人と競り合えます。
+      最初の家は街の端っこで家賃なし。Lv7で中心近くのマンションへ移ると家賃が週ごとに自動で引かれ、払えないと負債になります。
       引っ越し（Lv5→6・10→11・15→16）は純資産の半分を払う賭け。手持ちの現金は夜に狙われるので銀行へ（預金は奪われない）。
       取引タブの「板」に並ぶのは<b>実在の人の注文だけ</b>です。街の住人は店（市場・卸）としてだけ相手をします。
       すぐ現金にしたい時は卸へ、高く売りたい時は板へ出して買い手を待ちます。
@@ -836,7 +839,7 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
 <div class="modal" id="clsbox">
   <div class="mcard">
     <div class="mtitle">役職を選ぶ</div>
-    <p class="mdesc">住居 Lv5 に到達しました。ここから進む道を一つ選びます。あとから変えられません。</p>
+    <p class="mdesc">住居 Lv6 に到達しました。ここから進む道を一つ選びます。あとから変えられません。</p>
     <div id="clslist"></div>
   </div>
 </div>
@@ -852,10 +855,12 @@ const TIERS=[
   {n:"大豪邸",  roof:"grand",   lot:[6,5], zone:"rich"}
 ];
 const MAXHLV=20;
-const tierOf=lv=>Math.min(3,Math.floor((lv-1)/5));
+/* 家の格。Lv1〜6 は同じボロ家のまま育てられる（引っ越し不要）。
+   Lv7 で初めてマンションへ移る。最初の目標を Lv6 に置くため */
+const tierOf=lv=>lv<=6?0:Math.min(3,Math.floor((lv-2)/5));
 const hName=lv=>`${TIERS[tierOf(lv)].n} Lv${lv}`;
-/* 家賃：端っこのボロ家（Lv1〜5）はただ。Lv6から中心近くの貸しマンションに移り、家賃が発生する */
-const hRent=lv=>(lv<=5||(typeof NET!=="undefined"&&NET.on))?0:Math.round(24000*Math.pow(1.33,lv-1)/50)*50;
+/* 家賃：端っこのボロ家（Lv1〜6）はただ。Lv7から中心近くのマンションに移り、家賃が発生する */
+const hRent=lv=>(lv<=6||(typeof NET!=="undefined"&&NET.on))?0:Math.round(24000*Math.pow(1.33,lv-1)/50)*50;
 /* 改築：Lv1→2 は 800円・30分。上に行くほど高く、長い（工期は最大4日） */
 const hUpCost=lv=>Math.round(24000*Math.pow(1.62,lv-1)/50)*50;
 const hUpTime=lv=>Math.min(5760,Math.round(10*Math.pow(1.65,lv-1)));   /* 分 */
@@ -864,7 +869,7 @@ const RTIME=[10,40,150,480,1440];            /* 部屋 Lv1→5 の工期（分�
 const ROOMS=[
   {id:"bed",n:"寝室",ic:"🛏",e:l=>`体力の上限 ${100+l*20}`,base:200},
   {id:"sto",n:"貯蔵庫",ic:"🧺",e:l=>`食料の保管 ${[0,3,6,12,24,48][l]}個`,base:150},
-  {id:"vau",n:"金庫室",ic:"🔒",e:l=>`奪われない額 ${[0,2000,15000,80000,400000,2000000][l].toLocaleString("ja-JP")}円`,
+  {id:"vau",n:"金庫室",ic:"🔒",e:l=>`奪われない額 ${[0,40000,300000,1600000,8000000,40000000][l].toLocaleString("ja-JP")}円`,
    base:250},
   {id:"stu",n:"書斎",ic:"📚",e:l=>`研究枠 ${1+Math.floor(l/2)}`,base:350}
 ];
@@ -1834,8 +1839,8 @@ function tick(){
           say(`${TIERS[tierOf(S.hlv)].n}へ戻った`,0,1); }
       }
     }
-    if(S.bank>0&&lv("tou")){const it=Math.round(S.bank*tEff("tou"));
-      S.bank+=it; say("預金の利息",it);}
+    if(S.bank>0){const it=Math.round(S.bank*(BANK_RATE+tEff("tou")));
+      if(it>0){S.bank+=it; say("預金の利息",it);}}
   }
   if(big)draw(); else drawLive();
 }
@@ -1903,7 +1908,7 @@ const cost=(r,l)=>Math.round(r.base*Math.pow(2.0,l)/50)*50;
 const rTime=l=>RTIME[Math.min(l,RTIME.length-1)];
 const pick=(arr,i)=>arr[Math.max(0,Math.min(arr.length-1,i|0))];   /* 表からはみ出しても壊れない */
 const storeCap=()=>pick([0,3,6,12,24,48],rl("sto"));
-const vaultAmt=()=>pick([0,2000,15000,80000,400000,2000000],rl("vau"));
+const vaultAmt=()=>pick([0,40000,300000,1600000,8000000,40000000],rl("vau"));
 const studySlots=()=>1+Math.floor(rl("stu")/2);
 const npcAt=i=>S.npcs.find(n=>n.i===i);
 /* ============ 土地 ============
@@ -1922,7 +1927,7 @@ function newsText(k,p,fallback){
     if(k==="join")  return `${who} が街に来た（${p.plot}番地）`;
     if(k==="house") return `${who} の家が Lv${p.hlv} になった`;
     if(k==="firm")  return `${who} が会社を興した`;
-    if(k==="class") return `${who} が Lv5 に届き、生き方を選んだ`;
+    if(k==="class") return `${who} が Lv6 に届き、生き方を選んだ`;
     if(k==="bank")  return `銀行が新しい売地を出した`;
   }catch(_){}
   return clean(fallback,120);
@@ -2120,12 +2125,22 @@ function gemHeal(){
   S.gems-=c; S.hp=hpMax(); say(`💎${c}個で体力を全回復`,0,1);
   flash("体力が全快した"); tutStep("gem"); draw();
 }
-function bankMove(){
+/* 預金の利息。週に一度つく。ごくわずか（研究「投資」でここに上乗せされる） */
+const BANK_RATE=0.002;
+let BANKAMT=0;
+function bankPut(n){
+  n=Math.min(Math.max(0,Math.floor(n||0)),S.cash);
+  if(n<=0){flash("預ける額を入れてください");return;}
   if(!spend(1,"銀行"))return;
-  if(S.bank>0){const a=S.bank;S.bank=0;S.cash+=a;say("銀行から引出",0);}
-  else{if(S.cash<=0)return;const a=S.cash;S.cash=0;S.bank+=a;say("銀行へ預入",0);}
-  draw();
+  S.cash-=n; S.bank+=n; say("銀行へ預入",-n); flash(`${yen(n)}円 預けた`); draw();
 }
+function bankTake(n){
+  n=Math.min(Math.max(0,Math.floor(n||0)),S.bank);
+  if(n<=0){flash("引き出す額を入れてください");return;}
+  if(!spend(1,"銀行"))return;
+  S.bank-=n; S.cash+=n; say("銀行から引出",n); flash(`${yen(n)}円 引き出した`); draw();
+}
+function bankMove(){ if(S.bank>0)bankTake(S.bank); else bankPut(S.cash); }
 /* 引っ越し（格が上がる Lv5→6・10→11・15→16）は賭け：純資産の半分を払う。
    払った分は戻らない。家賃が上がり、4週滞納すると前の家に戻される */
 /* 純資産：現金・預金・車と会社と物件・手持ちの品・自社在庫・板に出している注文まで数える
@@ -2243,6 +2258,13 @@ function finishBuild(){
   if(S.build.id==="__house"){
     const before=tierOf(S.hlv); S.hlv++;
     say(`住居 Lv${S.hlv} 完成`,0,1); tellTown("house");
+    /* 建て替えるたびに祝い金が出る。上の階ほど大きい。
+       払った額の3割が戻り、💎も付く。上がった手ごたえをその場で返すため */
+    { const back=Math.round(hUpCost(S.hlv-1)*0.3/100)*100, gem=1+Math.floor(S.hlv/3);
+      if(back>0){ S.cash+=back; say(`建て替え祝い`,back,1); }
+      S.gems=(S.gems||0)+gem;
+      flash(`Lv${S.hlv} になった +${yen(back)}円 💎${gem}`);
+      if(NET.on)ledFlush().catch(()=>{}); }
     if(tierOf(S.hlv)>before){
       if(NET.on){
         /* 自分の土地の上で建て替わる。場所は動かない */
@@ -2255,8 +2277,8 @@ function finishBuild(){
         flash(`${TIERS[tierOf(S.hlv)].n}へ移った`);
       }
     }
-    if(S.hlv===5&&!S.cls)setTimeout(openClass,300);
-    if(S.hlv===6)say(NET.on?`Lv6 到達：企業の設立が解禁`:`Lv6 到達：企業の設立が解禁。ここから週 ${yen(hRent(6))}円の家賃が発生`,0,1);
+    if(S.hlv===6&&!S.cls)setTimeout(openClass,300);
+    if(S.hlv===6)say(`Lv6 到達：役職と企業の設立が解禁`,0,1);
     S.build=null; return;
   }
   const r=ROOMS.find(x=>x.id===S.build.id);
@@ -2398,7 +2420,7 @@ function nameAt(i){
   if(k==="lot")return "空き地";
   if(k==="myland")return "あなたの土地";
   if(k==="land"){const l=landOf(i); return (l&&l.n?l.n:"誰か")+"の土地";}
-  if(k==="npc"){const n=npcAt(i); return n?n.name+"宅":"民家";}
+  if(k==="npc"){const n=npcAt(i); return n?n.name+"宅":"民家";}   /* 英語版では ○○'s house */
   if(k==="pcco"){const co=coAt(i); return co?co.name:"会社";}
   if(k==="farm")return SITES[i]&&SITES[i].owner==="me"?"自社の農地":"農地";
   if(k==="mine")return SITES[i]&&SITES[i].owner==="me"?"自社の鉱山":"鉱山";
@@ -2530,9 +2552,9 @@ const TUT=[
    tab:"map", map:()=>tutShop(), sel:"#detail .btn.food1"},
   {id:"eat",      t:"食べると体力が戻る。体力が無いと働けない。",
    hint:"「食べる」を押す", sel:"#eatbtn"},
-  {id:"cardtab",  t:"ここで寄り道。この街には、歴史に名を残した人をたずねられる場所がある。",
+  {id:"cardtab",  t:"ここで歴史上の人物の力を借りることができる",
    hint:"右上の 🎴 を押す", sel:"#cardbtn"},
-  {id:"cardpull", t:"実業家と、盗賊。最初のひとりは無料でたずねられる。",
+  {id:"cardpull", t:"効果はそれぞれちがう自分と相性のいい人物を選ぼう",
    hint:()=>tutVisible(document.querySelector("#pull1"))?"「1人 たずねる」を押す":"右上の 🎴 を押す",
    sel:["#pull1","#cardbtn"]},
   {id:"cardteam", t:"はじめて会った人は、そのまま連れて歩く。その人の力が自分に効く。連れられるのは3人まで。",
@@ -2554,8 +2576,31 @@ const TUT=[
    tab:"map", sel:"#detail .btn.up1", map:()=>myHome()},
   {id:"gembuild", t:"工事も💎で今すぐ終わる。",
    hint:"「💎 で今すぐ完成」を押す", sel:"#rushbuild"},
-  {id:"done",     t:"これで基本は全部。働く・食べる・研究・改築。中心へはバス停から。手持ちの現金は夜に狙われるので銀行へ（会社タブの下からいつでも預けられる）。Lv5で役職、Lv6で企業が解禁。広い家にするには、空き地を買って引っ越す。",
-   hint:"", last:true}
+  {id:"banktab",  t:"手持ちの現金は銀行に預けられる強盗に入られた際盗まれなかったり、たまに増えたりするぞ",
+   hint:"「会社」タブを押す", tab:"biz", tabOnly:true},
+  {id:"deposit",  t:"",
+   hint:"「この額を預ける」を押す", tab:"biz", sel:".bankdep"},
+  {id:"tasktab",  t:"",
+   hint:"右上の 📋 を押す", sel:"#taskbtn"},
+  {id:"dailyget", t:"",
+   hint:"「受け取る」を押す", sel:"#dailygo"},
+  {id:"taskclose",t:"",
+   hint:"「閉じる」を押す", sel:"#taskclose"},
+  {id:"chatsay",  t:"ここではプレイ中の人と会話、契約ができる 何か送ってみよう",
+   hint:"なにか書いて「送る」を押す　例）よかったこの距離で",
+   open:()=>{ S.ctab="town"; $("chatbar").classList.add("open"); },
+   sel:"#chatform"},
+  {id:"goal6",    t:"まずは家をLv6まで上げよう",
+   hint:"", last:true},
+  /* ---- ここから第2章。住居Lv6に届いた人にだけ出る ---- */
+  {id:"cls6",     t:"Lv6になった 生き方をひとつ選ぼう",
+   hint:"どれかを押す", gate:()=>HLV()>=6,
+   open:()=>{ if(!S.cls&&!$("clsbox").classList.contains("on"))openClass(); }, sel:"#clslist"},
+  {id:"loan6",    t:"訓練所に通う金を、銀行から借りよう",
+   hint:"「200,000円 借りる」を押す", gate:()=>HLV()>=6, tab:"biz", sel:".borrow1"},
+  {id:"school6",  t:"訓練所へ行こう ここで受講すると起こせる会社が増える",
+   hint:()=>tutVisible(document.querySelector("#detail .btn"))?"「技術タブを開く」を押す":"光っている訓練所をタップ",
+   gate:()=>HLV()>=6, tab:"map", map:()=>tutSchool(), sel:"#detail .btn"},
 ];
 /* --------------------------------------------------------------
    もう済んでしまった手順は飛ばす。
@@ -2575,7 +2620,13 @@ const TUTDONE={
   upgrade: ()=>HLV()>1||!!S.build,         /* もう改築した／工事中 */
   research:()=>!!S.queue||TECHS.some(t=>lv(t.id)>0),
   eat:     ()=>S.hp>=hpMax()-1,            /* 体力が満タンなら食べられない */
-  cardpull:()=>Object.keys(S.cards||{}).length>0||(!S.freePull&&S.gems<CPULL)
+  cardpull:()=>Object.keys(S.cards||{}).length>0||(!S.freePull&&S.gems<CPULL),
+  deposit: ()=>S.bank>0||S.cash<=0,           /* もう預けてある／預ける現金が無い */
+  /* 受け取るボタンが出ない街（オフライン）や、もう受け取った後で止まらないように */
+  dailyget:()=>$("taskbox").classList.contains("on")&&!document.querySelector("#dailygo"),
+  cls6:    ()=>!!S.cls,                       /* もう選んである */
+  /* 借りられない（担保が足りない）人をここで止めない */
+  loan6:   ()=>S.loan.amt>0||loanCap()-S.loan.amt<20000
 };
 function tutAuto(){
   let g=0, moved=false;
@@ -2595,6 +2646,12 @@ function tutShop(){
   PLOTS.forEach((p,i)=>{ if(KINDS[i]!=="shop")return;
     const d=dist(h,i); if(d<bd){bd=d;best=i;} });
   return best>=0?best:START_SHOP;
+}
+function tutSchool(){
+  let best=-1,bd=1e9; const h=myHome();
+  PLOTS.forEach((p,i)=>{ if(KINDS[i]!=="school")return;
+    const d=dist(h,i); if(d<bd){bd=d;best=i;} });
+  return best>=0?best:myHome();
 }
 function tutStep(id){
   if(!tutOn())return;
@@ -2662,10 +2719,14 @@ function drawTut(){
     const m=$("tutmask"); if(m)m.classList.remove("on"); return; }
   box.style.display="block";
   const c=tutCur();
+  /* 「ここまで来たら続き」という手順。条件が揃うまでは案内を出さない */
+  if(c.gate&&!c.gate()){ box.innerHTML=""; box.style.display="none";
+    const m2=$("tutmask"); if(m2)m2.classList.remove("on"); return; }
+  if(c.open)try{ c.open(); }catch(_){}
   box.innerHTML=`<div class="tut-h">
       <span class="tut-n">${S.tut+1} / ${TUT.length}</span>
       <button class="tut-x" id="tutx">スキップ</button></div>
-    <div class="tut-t">${c.t}</div>
+    ${c.t?`<div class="tut-t">${c.t}</div>`:""}
     ${(typeof c.hint==="function"?c.hint():c.hint)?`<div class="tut-hint">👉 ${typeof c.hint==="function"?c.hint():c.hint}</div>`:""}
     ${c.last?`<button class="sm go" id="tutdone" style="margin-top:8px">はじめる</button>`:""}`;
   const x=$("tutx"); if(x)x.onclick=tutSkip;
@@ -2840,6 +2901,7 @@ function initChat(){
     const v=($("chatinput").value||"").trim(); if(!v)return;
     $("chatinput").value="";
     chatPush(S.name||"あなた",v,"me");
+    tutStep("chatsay");
   };
 }
 
@@ -2988,7 +3050,7 @@ function drawDetail(){
             return `自分の土地（${PLOTS[S.netPlot].w}×${PLOTS[S.netPlot].h}マス）なので家賃なし ／ この広さには ${TIERS[mt].n}まで建てられる`
               +(mt<=cur&&cur<3?`。${TIERS[cur+1].n}にするには、もっと広い空き地を買って引っ越す`:""); })()
         :hRent(HLV())?`週家賃 ${yen(hRent(HLV()))}円（次は ${fmtMin(nextRent)} 後・貸し物件）`
-        :`家賃なし（街の端っこ。中心まで ${fmtMin(dist(S.at,KINDS.indexOf("bank"))*MIN_PER_CELL/vMul())}）／ Lv6で中心近くの貸しマンションへ移り、週 ${yen(hRent(6))}円の家賃が発生`)
+        :`家賃なし（街の端っこ。中心まで ${fmtMin(dist(S.at,KINDS.indexOf("bank"))*MIN_PER_CELL/vMul())}）／ Lv7で中心近くのマンションへ移ると、週 ${yen(hRent(7))}円の家賃が発生`)
       +` ／ 金庫 ${yen(vaultAmt())}円`+
       (S.debt>0?`<br><span style="color:var(--red)">負債 ${yen(S.debt)}円（滞納 ${S.arrears}週）</span>`
         +`<br><span class="d-t">家賃は自動で引かれ、足りないぶんが負債になります。4週続くと住居が1段下がります。</span>`:""));
@@ -3016,6 +3078,24 @@ function drawDetail(){
       ()=>{go("home");},"key wide");
     if(HLV()<MAXHLV)mkBtn(box,isMove(HLV())?"🚚":"⬆",isMove(HLV())?`Lv${HLV()+1} へ引っ越し（${TIERS[tierOf(HLV()+1)].n}）`:`Lv${HLV()+1} へ改築`,
       upSub(),upgradeHouse,"key wide up1",!upOk());
+    /* 足りない物があるとき、どこへ行けばいいかを出す。
+       建材は「取引」タブの市場で買える。広い土地は空き地を買って引っ越す */
+    { const need=matNeed(HLV()+1), short=need-(S.inv.mat||0);
+      if(short>0)mkBtn(box,"🧱","建材を買いに行く",
+        `あと ${short}個（取引タブの市場と板で買えます）`,()=>{ go("auc"); },"wide"); }
+    if(needLot(HLV())){
+      mkBtn(box,"🔍","広い空き地をさがす",lotNeedText(HLV()),()=>{
+        const t=tierOf(HLV()+1);
+        const cand=PLOTS.map((q,i)=>i).filter(i=>kindAt(i)==="lot"&&lotFits(i,t))
+          .sort((a,b)=>landPx(a)-landPx(b));
+        if(!cand.length){ flash("いまは売りに出ていません"); return; }
+        S.sel=cand[0]; centerOn(PLOTS[S.sel]); go("map"); draw();
+        flash(`${PLOTS[S.sel].w}×${PLOTS[S.sel].h}マスの空き地`);
+      },"wide");
+      const h2=document.createElement("p"); h2.className="hint";
+      h2.textContent="土地を買ったら、その土地を押して「ここへ引っ越す」。引っ越すかどうかは自由です。いまの家のままでも構いません。";
+      w.appendChild(h2);
+    }
     if(isMove(HLV())&&!NET.on){const p=document.createElement("p"); p.className="hint";
       p.textContent=`引っ越しは賭け。純資産（所持金・預金・車・会社・物件から借入と負債を引いた額 ${yen(netWorth())}円）の半分を払い、払った分は戻らない。工事の ${fmtMin(hUpTime(HLV()))} は家財が箱詰めで金庫室が使えず、狙われる確率が1.8倍になる（現金は銀行へ）。移った先は家賃 週${yen(hRent(HLV()+1))}円、4週滞納すると前の家に戻される。`; w.appendChild(p);}
   }else if(kind==="lot"||kind==="myland"||kind==="land"){
@@ -3146,7 +3226,7 @@ function drawDetail(){
       mkBtn(box,"🚌",`${stopName(i)}へ`,pl.bus?`${fmtMin(pl.min)} ・ 運賃 ${yen(pl.fare)}円`:`${fmtMin(pl.min)} ・ 歩き（${S.cash<busFare(dist(S.at,i))?"運賃が足りない":"歩いた方が早い"}）`,()=>begin("move",i,0,nameAt(i)),"",isBusy());});
   }else if(kind==="school"){
     head("訓練所","産業のノウハウ","ここで受講すると、製鉄や自動車などの会社を起こせるようになる。研究は技術タブで。");
-    mkBtn(box,"📚","技術タブを開く","産業のノウハウは、ここにいる時だけ受講を始められる",()=>go("tech"),"key wide");
+    mkBtn(box,"📚","技術タブを開く","産業のノウハウは、ここにいる時だけ受講を始められる",()=>{tutStep("school6"); go("tech");},"key wide");
   }else if(kind==="diner"){
     const m=S.market.meal, unit=Math.min(m.price,GOODS.meal.base*CEIL)*(cls()==="trader"?0.85:1);
     head("飲食店","食事","食べると体力が大きく戻り、4時間 給料+5%。"+(S.buff.meal>S.t?"（強化中）":""));
@@ -3552,7 +3632,15 @@ function rentIncome(){
   let tot=0; S.owned.forEach(i=>{const n=npcAt(i); if(n)tot+=Math.round(housePrice(n)*RENT_RATE);});
   return tot;
 }
-const assetValue=()=>VEHICLES[S.veh].cost+(hasFirm()?F().setup+(S.firm.trucks||0)*GOODS.truck.base*0.6+(S.firm.wh||0)*WH_COST*0.6:0)
+/* 自宅と持っている土地も担保になる。ここを入れないと、車も会社も無い Lv6 の人は
+   担保ゼロで1円も借りられなかった。家は建てた費用の半額で見る（貸し倒れ対策） */
+function homeValue(){
+  let v=0; for(let l=1;l<HLV();l++)v+=hUpCost(l); v=Math.round(v/2);
+  try{ if(NET.on&&NET.id&&typeof LAND!=="undefined")
+    Object.keys(LAND).forEach(k=>{ if(LAND[k]&&LAND[k].o===NET.id)v+=landPx(+k); }); }catch(_){}
+  return v;
+}
+const assetValue=()=>VEHICLES[S.veh].cost+homeValue()+(hasFirm()?F().setup+(S.firm.trucks||0)*GOODS.truck.base*0.6+(S.firm.wh||0)*WH_COST*0.6:0)
   +S.owned.reduce((a,i)=>{const n=npcAt(i);return a+(n?housePrice(n):0);},0);
 
 /* ---- 融資 ---- */
@@ -3563,7 +3651,7 @@ function borrow(amt){
   if(amt<=0){flash("担保が足りません（車・会社・物件が担保になります）");return;}
   if(!spend(1,"借入"))return;
   S.loan.amt+=amt; S.cash+=amt;
-  say(`銀行から借入`,amt,1); flash(`${yen(amt)}円を借りた`); draw();
+  say(`銀行から借入`,amt,1); flash(`${yen(amt)}円を借りた`); tutStep("loan6"); draw();
 }
 function repay(amt){
   amt=Math.min(amt,S.loan.amt,S.cash);
@@ -4246,7 +4334,7 @@ function openGemShop(){
   const fw=document.createElement("div"); fw.className="detail";
   if(online){
     fw.innerHTML=`<div class="d-h"><span class="d-n">🎁 毎日のごほうび</span><span class="d-t">連続で増える</span></div>
-      <div class="d-b">上の 📋 から受け取れます。連続で来るほど増えて、7日目で💎12個＋30,000円。</div>`;
+      <div class="d-b">上の 📋 から受け取れます。連続で来るほど増えて、3日目と5日目に現金、7日目は💎12個＋600,000円。</div>`;
     const fa=document.createElement("div"); fa.className="acts"; fw.appendChild(fa);
     mkBtn(fa,"📋","受け取りに行く","毎日のごほうび",()=>{ box.classList.remove("on"); $("taskbox").classList.add("on"); taskDraw(); taskSync(true); },"key wide");
   }else{
@@ -5986,15 +6074,33 @@ function drawBankPanel(B){
   w.innerHTML=`<div class="rows">
       <div class="row"><span class="k">預金</span><span class="v">${yen(S.bank)}円</span></div>
       <div class="row"><span class="k">借入（週利3%）</span><span class="v ${S.loan.amt>0?"neg":""}">${yen(S.loan.amt)}円</span></div>
-      <div class="row"><span class="k">担保価値</span><span class="v">${yen(assetValue())}円（車・会社・物件）</span></div>
+      <div class="row"><span class="k">担保価値</span><span class="v">${yen(assetValue())}円（自宅・土地・車・会社・物件）</span></div>
       <div class="row"><span class="k">あと借りられる</span><span class="v">${yen(cap)}円</span></div>
     </div>`;
   B.appendChild(w);
+  /* いくら預けるか・引き出すかを選べる。全額しか選べないと、
+     手元に食費も残さず預けてしまう */
+  const amt=document.createElement("div"); amt.className="detail"; amt.style.marginTop="8px";
+  amt.innerHTML=`<div class="d-h"><span class="d-n">金額を決める</span>
+      <span class="d-t">週利 ${(BANK_RATE*100).toFixed(1)}%${lv("tou")?`＋研究 ${(tEff("tou")*100).toFixed(1)}%`:""}</span></div>
+    <input id="bankamt" class="minput" type="number" inputmode="numeric" min="0" step="1000"
+      value="${BANKAMT||Math.max(0,S.cash)}" style="width:100%;margin:6px 0 0">
+    <div class="chips" id="bankchips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>`;
+  B.appendChild(amt);
+  const inp=amt.querySelector("#bankamt"), chips=amt.querySelector("#bankchips");
+  inp.oninput=()=>{BANKAMT=Math.max(0,Math.floor(+inp.value||0));};
+  const chip=(label,fn)=>{ const c=document.createElement("button"); c.className="sm"; c.style.padding="4px 10px";
+    c.textContent=label; c.onclick=()=>{BANKAMT=Math.max(0,Math.floor(fn())); inp.value=BANKAMT; }; chips.appendChild(c); };
+  chip("1万",()=>10000); chip("10万",()=>100000); chip("半分",()=>S.cash/2);
+  chip("手持ち全部",()=>S.cash); chip("預金全部",()=>S.bank);
   const box=document.createElement("div"); box.className="acts"; B.appendChild(box);
-  mkBtn(box,"🏦",S.bank>0?"全額引き出す":"全額預ける",S.bank>0?`${yen(S.bank)}円`:"預金は奪われない",bankMove,"",S.bank<=0&&S.cash<=0);
-  mkBtn(box,"💴","10,000円 借りる","担保の半額まで",()=>borrow(10000),"",cap<1000);
-  mkBtn(box,"💴","限度まで借りる",`${yen(cap)}円`,()=>borrow(cap),"",cap<1000);
-  mkBtn(box,"↩","返す（10,000円）",`残り ${yen(S.loan.amt)}円`,()=>repay(10000),"",S.loan.amt<=0||S.cash<1);
+  mkBtn(box,"🏦","この額を預ける",`手持ち ${yen(S.cash)}円`,()=>bankPut(BANKAMT||S.cash),"bankdep",S.cash<=0);
+  mkBtn(box,"🏧","この額を引き出す",`預金 ${yen(S.bank)}円`,()=>bankTake(BANKAMT||S.bank),"",S.bank<=0);
+  mkBtn(box,"🏦","全額預ける",S.cash>0?`${yen(S.cash)}円`:"預金は奪われない",()=>bankPut(S.cash),"",S.cash<=0);
+  mkBtn(box,"🏧","全額引き出す",S.bank>0?`${yen(S.bank)}円`:"",()=>bankTake(S.bank),"",S.bank<=0);
+  mkBtn(box,"💴",`${yen(Math.min(200000,cap))}円 借りる`,"担保の半額まで",()=>borrow(200000),"borrow1",cap<20000);
+  mkBtn(box,"💴","限度まで借りる",`${yen(cap)}円`,()=>borrow(cap),"",cap<20000);
+  mkBtn(box,"↩","返す（200,000円）",`残り ${yen(S.loan.amt)}円`,()=>repay(200000),"",S.loan.amt<=0||S.cash<1);
   mkBtn(box,"↩","全額返す","",()=>repay(S.loan.amt),"wide",S.loan.amt<=0||S.cash<1);
   const p=document.createElement("p"); p.className="hint"; p.style.margin="8px 0 0";
   p.textContent="借入が担保の9割を超えたまま2週続くと、物件→車の順に差し押さえられます。";
@@ -6118,7 +6224,7 @@ function loadSlot(){
   return false;
 }
 loadSlot();
-say("この街に転入。所持金 2,000円",0,1);
+say(`この街に転入。所持金 ${yen(S.cash)}円`,0,1);
 /* --- 名前と役職 --- */
 /* 名前を空のまま「始める」を押す人が4割いた。「名無し」だと誰からも呼べず、
    人がいる街なのに一人で遊んでいるのと同じになる。だから最初から候補を入れておく */
@@ -6157,7 +6263,7 @@ function openClass(){
     const b=document.createElement("button"); b.className="clsopt";
     b.innerHTML=`<span class="ci">${c.ic}</span>
       <span><span class="cn">${c.n}</span><br><span class="cd">${c.d}</span></span>`;
-    b.onclick=()=>{S.cls=c.id; box.classList.remove("on");
+    b.onclick=()=>{S.cls=c.id; box.classList.remove("on"); tutStep("cls6");
       say(`役職に「${c.n}」を選んだ`,0,1); flash(`${c.n} になった`); tellTown("class"); draw();};
     list.appendChild(b);
   });
@@ -6426,6 +6532,8 @@ async function acctSwitch(){
 /* ---- 毎日のごほうびと、1時間ごとの依頼 ---- */
 const TASK={daily:null,quests:[],next:null,t:0,busy:false};
 const DAILY_GEM=[2,3,4,5,6,8,12];
+/* 3日目・5日目・7日目は現金も出る。2日目に来ない問題への手当て */
+const DAILY_CASH=[0,0,50000,0,150000,0,600000];
 async function taskSync(force){
   if(!SRV()||!S.name)return;
   if(!force&&Date.now()-TASK.t<45000)return;
@@ -6441,7 +6549,10 @@ async function taskSync(force){
 const qDone=q=>Number(q.now||0)>=Number(q.need||0);
 function taskDot(){
   const d=$("taskdot"); if(!d)return;
-  d.hidden=!((TASK.daily&&TASK.daily.ready)||TASK.quests.some(qDone));
+  /* 受け取れる物があるとき。加えて、まだ一度も開いていない人には出しておく。
+     チュートリアルが終わったあと「次に何をするか」の置き場がここにあることを、
+     文章を足さずに知らせるため */
+  d.hidden=!((TASK.daily&&TASK.daily.ready)||TASK.quests.some(qDone)||(!S.taskSeen&&!tutOn()));
 }
 function qText(q){
   if(q.k==="own"){ const g=GOODS[q.good]; return `${g?g.ic+g.n:q.good} を <b>${q.need}個</b> ためる`; }
@@ -6449,6 +6560,20 @@ function qText(q){
   if(q.k==="hlv")  return `住居のレベルを <b>1つ</b> 上げる`;
   if(q.k==="trade")return `取引所の板で、だれかと <b>1回</b> 取引する`;
   return q.txt||"依頼";
+}
+/* 序盤のはっきりした目標。Lv6 までは「次に何をすればいいか」を1本に絞って出す。
+   Lv6 で企業が解禁されるので、そこを最初のゴールにする */
+function goalHtml(){
+  const h=HLV(); if(h>=6)return "";
+  const cost=upCost(h), have=S.cash+S.bank;
+  return `<div class="dcard" style="margin-bottom:10px">
+    <div style="font-size:13px"><b>いまの目標：住居を Lv6 にする</b>
+      <span style="color:var(--faint)">Lv6 で会社を持てるようになります</span></div>
+    <div class="dstreak">${[1,2,3,4,5,6].map(i=>
+      `<span class="${i<=h?"on":""}">Lv${i}</span>`).join("")}</div>
+    <div style="font-size:12px;margin-top:4px">つぎの建て替え <b>Lv${h+1}</b> ${yen(cost)}円
+      <span style="color:var(--faint)">${have>=cost?"いま払えます":`あと ${yen(cost-have)}円`}</span></div>
+  </div>`;
 }
 function taskDraw(){
   const db=$("dailybox"), ql=$("questlist"), qn=$("questnote");
@@ -6460,12 +6585,12 @@ function taskDraw(){
   const d=TASK.daily;
   if(d){
     const st=d.ready?d.next:d.streak;
-    db.innerHTML=`<div class="dcard">
+    db.innerHTML=goalHtml()+`<div class="dcard">
       <div style="font-size:13px">${d.ready?`今日のぶんを受け取れます`:`今日のぶんは受け取り済みです`}
         <span style="color:var(--faint)">（連続 ${d.streak} 日目 / 通算 ${d.total} 日）</span></div>
       <div class="dstreak">${DAILY_GEM.map((g,i)=>
-        `<span class="${(i+1)<=st?"on":""}">${i+1}日<br>💎${g}</span>`).join("")}</div>
-      ${d.ready?`<button class="sm go" id="dailygo" style="width:100%;margin-top:6px">💎${DAILY_GEM[d.next-1]} を受け取る${d.next===7?"（＋30,000円）":""}</button>`
+        `<span class="${(i+1)<=st?"on":""}">${i+1}日<br>💎${g}${DAILY_CASH[i]?`<br>${Math.round(DAILY_CASH[i]/10000)}万`:""}</span>`).join("")}</div>
+      ${d.ready?`<button class="sm go" id="dailygo" style="width:100%;margin-top:6px">💎${DAILY_GEM[d.next-1]} を受け取る${DAILY_CASH[d.next-1]?`＋${yen(DAILY_CASH[d.next-1])}円`:""}</button>`
                :`<div style="font-size:11px;color:var(--faint);margin-top:4px">日付が変わるとまた受け取れます。1日空けると1日目に戻ります。</div>`}
     </div>`;
     if(d.ready)$("dailygo").onclick=dailyGo;
@@ -6497,6 +6622,7 @@ async function dailyGo(){
       if(r.balance!=null)ledApply(r.balance);
       say(`毎日のごほうび 💎${r.gems}${r.cash?` と ${yen(r.cash)}円`:""}（連続 ${r.streak} 日目）`,r.cash||0,1);
       flash(`💎${r.gems} を受け取りました`);
+      tutStep("dailyget");
     }
     TASK.t=0; await taskSync(true); draw();
   }catch(e){ flash(String((e&&e.message)||e).slice(0,40)); }
@@ -6696,8 +6822,8 @@ $("cardbtn").onclick=()=>{ CTAB="pull"; $("cardbox").classList.add("on"); cardDr
 $("cardclose").onclick=()=>{ $("cardbox").classList.remove("on"); tutStep("cardteam"); };
 ["pull","book","eff"].forEach(t=>{ $("ctab_"+t).onclick=()=>{ CTAB=t; cardDraw(); }; });
 
-$("taskbtn").onclick=()=>{ $("taskbox").classList.add("on"); taskDraw(); taskSync(true); };
-$("taskclose").onclick=()=>$("taskbox").classList.remove("on");
+$("taskbtn").onclick=()=>{ S.taskSeen=1; $("taskbox").classList.add("on"); taskDraw(); taskSync(true); tutStep("tasktab"); };
+$("taskclose").onclick=()=>{ $("taskbox").classList.remove("on"); tutStep("taskclose"); taskDot(); };
 $("acctmake").onclick=()=>acctOpen("make");
 $("acctlogin").onclick=()=>acctOpen("login");
 $("acctgo").onclick=acctGo;
@@ -6760,7 +6886,9 @@ if(!S.name){ npcSupply(); npcSupply(); }   /* 店の棚を初日から満たし�
 /* まっさらな住人を作る。o.name / o.tut を渡すと引き継ぐ（オンラインの自分を作るときに使う） */
 function newChar(o){
   o=o||{};
-  Object.assign(S,{t:0,real:Date.now(),cash:5000,bank:0,food:1,hp:55,hlv:1,gems:8,freePull:1,job:"part",firm:null,
+  /* 初期の所持金。インフレの時にここだけ 5,000 のまま残っていた。
+     新しく作った人が 5,000円 から始まってしまう（サーバーは 100,000円 で用意しているのに） */
+  Object.assign(S,{t:0,real:Date.now(),cash:100000,bank:0,food:1,hp:55,hlv:1,gems:8,freePull:1,job:"part",firm:null,
     name:"",cls:null,tut:0,debt:0,arrears:0,chat:[],
     owned:[],loan:{amt:0,weeks:0},inv:{},
     veh:0,busy:null,jobAt:null,guardTo:0,guardAuto:false,robbed:0,
@@ -6782,7 +6910,7 @@ function hardReset(){
   try{localStorage.removeItem(saveKey());}catch(_){}
   newChar({});
   go("map"); centerOn(PLOTS[S.at]);
-  say("この街に転入。所持金 5,000円",0,1);
+  say(`この街に転入。所持金 ${yen(S.cash)}円`,0,1);
   draw(); flash("最初からやり直します"); openName();
 }
 /* 入る街を決めて、その街の自分を出す（居なければ作る） */
