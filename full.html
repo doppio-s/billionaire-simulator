@@ -438,6 +438,25 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
   font-family:var(--ui); text-decoration:underline; padding:2px 4px}
 .tut-t{font-size:13px; line-height:1.55}
 .tut-hint{font-size:12px; color:var(--gold); font-weight:700; margin-top:6px}
+/* 目標バー：チュートリアルが終わったあとも消さず、いつも「つぎの一手」を出しておく */
+/* 目標バーは常に下端。モーダル(z-index:80)より必ず下に置く。
+   #tutbar は案内用に z-index:95（幕より上）にしてあるので、
+   そのままだと契約書などの窓の上に居座ってしまう */
+#tutbar.goal{position:sticky; bottom:0; z-index:20;
+  padding:8px 11px; background:linear-gradient(180deg,#2E2513,#211A0D)}
+.goal-row{display:flex; align-items:center; gap:9px}
+.goal-tx{flex:1; min-width:0}
+.goal-t{font-size:12.5px; font-weight:700; line-height:1.35;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.goal-s{display:block; font-size:11px; color:var(--gold); margin-top:2px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.goal-s.far{color:var(--faint)}
+/* .sm は width:100% なので、そのままだと横に伸びて左の文字を押し出す */
+.goal-b{flex:none; width:auto; padding:7px 14px; font-size:12.5px}
+.goal-min{flex:none; background:none; border:none; color:var(--faint); font-size:15px;
+  line-height:1; cursor:pointer; padding:4px 2px}
+#tutbar.goal.min .goal-tx,#tutbar.goal.min .goal-b{display:none}
+#tutbar.goal.min{padding:4px 10px}
 .tut-target:not(.cityfr){position:relative; animation:tutpulse 1.2s ease-in-out infinite;
   outline:2.5px solid var(--gold) !important; outline-offset:2px; border-radius:10px}
 /* チュートリアル中、押す所以外を暗くする。
@@ -828,11 +847,10 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
   <div class="mcard">
     <div class="mtitle">この街での名前</div>
     <p class="mdesc">あとから変えられません。ほかの住人にはこの名前で表示されます。</p>
-    <div style="display:flex;gap:8px;align-items:stretch">
-      <input id="nameinput" class="minput" maxlength="10" placeholder="例：カジ" autocomplete="off" style="flex:1">
-      <button class="sm" id="namedice" title="別の名前にする" style="padding:0 14px;font-size:18px">🎲</button>
-    </div>
-    <button class="sm go" id="namego" style="margin-top:10px">この名前で始める</button>
+    <input id="nameinput" class="minput" maxlength="10" placeholder="ここに名前を入力"
+           autocomplete="off" style="width:100%;box-sizing:border-box">
+    <p class="mdesc" id="namemsg" style="color:var(--gold);min-height:15px;margin:6px 0 0"></p>
+    <button class="sm go" id="namego" style="margin-top:4px" disabled>この名前で始める</button>
   </div>
 </div>
 
@@ -863,7 +881,9 @@ const hName=lv=>`${TIERS[tierOf(lv)].n} Lv${lv}`;
 const hRent=lv=>(lv<=6||(typeof NET!=="undefined"&&NET.on))?0:Math.round(24000*Math.pow(1.33,lv-1)/50)*50;
 /* 改築：Lv1→2 は 800円・30分。上に行くほど高く、長い（工期は最大4日） */
 const hUpCost=lv=>Math.round(24000*Math.pow(1.62,lv-1)/50)*50;
-const hUpTime=lv=>Math.min(5760,Math.round(10*Math.pow(1.65,lv-1)));   /* 分 */
+/* Lv1→2 が10分、Lv19→20 で約19時間、上限は1日。
+   前は1.65倍ずつでLv11時点が15時間、上限4日。誰もそこまで行かなかった。 */
+const hUpTime=lv=>Math.min(1440,Math.round(10*Math.pow(1.30,lv-1)));   /* 分 */
 const roomCap=lv=>Math.min(5,1+Math.floor(lv/3));
 const RTIME=[10,40,150,480,1440];            /* 部屋 Lv1→5 の工期（分） */
 const ROOMS=[
@@ -1682,6 +1702,8 @@ const JOBS={
   npc: {n:"運営企業", min:120, pay:14000, hp:30, ic:"🏢"},
   pc:  {n:"プレイヤー企業", min:120, pay:20000, hp:30, ic:"🏭"}
 };
+/* バイトは30分のまま。最初の数回だけ「新入りの上限」で短くなる。
+   画面に出る数字も、その短くなった方を出す（showMin）。 */
 /* 体力：働くと減り、食事で戻る。時間でも少しずつ回復する */
 const hpMax=()=>100+rl("bed")*20;
 /* ほぼすべての行動で体力を使う。足りなければ何もできない */
@@ -1712,7 +1734,12 @@ const cls=()=>S.cls;
 const gDay =()=>1+Math.floor(S.t/DAY);
 const gMin =()=>Math.floor(S.t%DAY);
 const clock=()=>`${String(Math.floor(gMin()/60)).padStart(2,"0")}:${String(gMin()%60).padStart(2,"0")}`;
-const fmtMin=m=>{m=Math.max(0,Math.ceil(m));
+const fmtMin=m=>{
+  m=Math.max(0,m);
+  /* 1分に満たない待ちは秒で出す。新入りの最初の一手は10秒で終わるのに、
+     切り上げて「1分」と出していた。数字が実際より重く見えていた */
+  if(m>0&&m<1){const sec=Math.max(1,Math.round(m*60)); return `${sec}秒`;}
+  m=Math.ceil(m);
   if(m>=1440){const d=Math.floor(m/1440), h=Math.floor((m%1440)/60); return `${d}日${h?h+"時間":""}`;}
   return m<60?`${m}分`:`${Math.floor(m/60)}時間${m%60?m%60+"分":""}`;};
 
@@ -1730,8 +1757,8 @@ function travelText(to){
   if(to===S.at)return "いまここにいます";
   if(tutOn())return "すぐ着く（チュートリアル）";
   const pl=travelPlan(S.at,to);
-  return pl.bus?`ここから ${fmtMin(pl.min)}（🚌バス ${stopName(pl.a)}→${stopName(pl.b)}・運賃 ${yen(pl.fare)}円）・体力 −${travelHp(to)}`
-    :`ここから ${fmtMin(pl.min)}（${VEHICLES[S.veh].ic}${VEHICLES[S.veh].n}）・移動で体力 −${travelHp(to)}`;
+  return pl.bus?`ここから ${fmtMin(showMin(pl.min))}（🚌バス ${stopName(pl.a)}→${stopName(pl.b)}・運賃 ${yen(pl.fare)}円）・体力 −${travelHp(to)}`
+    :`ここから ${fmtMin(showMin(pl.min))}（${VEHICLES[S.veh].ic}${VEHICLES[S.veh].n}）・移動で体力 −${travelHp(to)}`;
 }
 const busyLeft=()=>S.busy?Math.max(0,S.busy.end-S.t):0;
 const isBusy  =()=>!!S.busy&&busyLeft()>0;
@@ -1740,11 +1767,17 @@ const isBusy  =()=>!!S.busy&&busyLeft()>0;
    時計を早送りする代わりの仕組み。最初のバイトが30秒で終わるので、
    数分さわっただけで「働く→買う→建てる」の輪が一周する。
    9回で本来の長さになる（だいたい最初の一遊び分）。 */
-const RAMP=[0.02,0.05,0.10,0.18,0.30,0.45,0.60,0.75,0.90];
+/* 掛け算ではなく「この回の待ちは最大でも何分か」で決める。
+   掛け算だと元の長さで結果がばらつき、最初の一手が何秒になるか読めなかった。
+   1回目＝10秒。そこから9回かけて本来の長さに戻す。 */
+const RAMP=[1/6, 0.5, 1, 2, 5, 10, 20, 45, 90];   /* 分：10秒→30秒→1分→…→1時間半 */
 const rampN  =()=>S.doneN||0;
 const rampOn =()=>rampN()<RAMP.length;
-const rampMul=()=>rampOn()?RAMP[rampN()]:1;
-const rampMin=m=>m<=0?0:Math.max(0.5,Math.round(m*rampMul()*10)/10);
+const rampCap=()=>rampOn()?RAMP[rampN()]:Infinity;
+const rampMin=m=>m<=0?0:Math.round(Math.min(m,rampCap())*100)/100;
+/* 画面に出す待ち時間。ここを素の値のままにしていたので、
+   実際は36秒で終わるバイトが「30分」と表示され、押される前に閉じられていた。 */
+const showMin=m=>rampMin(m);
 function rampUse(){ if(!tutOn()&&rampOn())S.doneN=rampN()+1; }
 
 /* 行動を始める。移動時間＋所要時間をまとめて消費する */
@@ -1976,7 +2009,9 @@ function awayNotice(){
   const dms=Object.keys(S.dm||{}).map(nm=>({nm,n:dmOf(nm).filter(m=>!m.me&&!m.r).length,
       last:(dmOf(nm).filter(m=>!m.me).slice(-1)[0]||{}).t||""})).filter(x=>x.n>0);
   const news=NEWS.filter(x=>x.at>BOOT_LAST&&x.who!==NET.id).slice(-6).reverse();
-  if(!dms.length&&!news.length)return;
+  /* 返事待ちの契約書。下の細い一行では気づかれないので、ここにも出す */
+  const cos=(S.contracts||[]).filter(c=>c.state==="offer"&&!c.mine);
+  if(!dms.length&&!news.length&&!cos.length)return;
   AWAYSHOWN=1;
   const B=$("awaybody"), A=$("awayacts"); B.innerHTML=""; A.innerHTML="";
   if(dms.length){
@@ -1987,11 +2022,23 @@ function awayNotice(){
       <b class="bdg">${x.n}</b></button>`; });
     B.innerHTML+=`<div class="d-t" style="margin-top:4px">押すと、その人との個人チャットが開きます。相手が留守でも返事は届きます。</div>`;
   }
+  if(cos.length){
+    B.innerHTML+=`<div class="away-h">📄 届いている契約書</div>`;
+    cos.slice(-5).reverse().forEach(c=>{
+      const k=CKIND[c.kind]||{n:"契約書",ic:"📄"};
+      B.innerHTML+=`<button class="away-dm" data-co="1"><span>${k.ic}</span>
+        <span><b>${esc(c.who||"")}</b><br><span class="d-t">${esc(k.n)}</span></span>
+        <b class="bdg">!</b></button>`;
+    });
+    B.innerHTML+=`<div class="d-t" style="margin-top:4px">承諾するか、断るかを決めてください。放っておくと相手が待ち続けます。</div>`;
+  }
   if(news.length){
     B.innerHTML+=`<div class="away-h">📢 街の出来事</div>`+news.map(x=>`<div class="away-line">${esc(x.t)}</div>`).join("");
   }
   B.querySelectorAll(".away-dm").forEach(b=>{ b.onclick=()=>{ $("awaybox").classList.remove("on");
-    S.ctab="dm"; S.dmOpen=b.dataset.nm; $("chatbar").classList.add("open"); drawChat(); }; });
+    if(b.dataset.co){ S.ctab="co"; }
+    else { S.ctab="dm"; S.dmOpen=b.dataset.nm; }
+    $("chatbar").classList.add("open"); drawChat(); }; });
   mkBtn(A,"🏙",dms.length?"あとで読む（街へ出る）":"街へ出る","",()=>{ $("awaybox").classList.remove("on"); },"key wide");
   $("awaybox").classList.add("on");
 }
@@ -2101,7 +2148,16 @@ function eat(){
 }
 /* 💎の値段：待ち時間 30分ごとに1個（最低1個）。長く待つものほど高い */
 const GEM_MIN=30;
-const gemFor=min=>Math.max(1,Math.ceil((min-0.01)/GEM_MIN));   /* 端数の誤差で1個増えないように */
+/* 1個で30分ぶん。ただし、
+   ・1分に満たない待ちは、飛ばすのに💎を取らない（新入りの間はほぼこれ）
+   ・長い待ちほど1個あたりが効くようにする。素直に割ると1日＝48個で、
+     誰も持っていない数になり、💎が「使えないもの」になっていた */
+const gemFor=min=>{
+  const m=Math.max(0,min);
+  if(m<=1)return 0;
+  return Math.max(1,Math.round(Math.pow(m/GEM_MIN,0.72)));
+};
+const gemBtn=(n,t)=>n>0?`💎${n} ${t}`:String(t).replace(/^で/,"");
 const travelLeft=()=>{ if(!isBusy())return 0; const b=S.busy, el=b.total-busyLeft(); return Math.max(0,b.travel-el); };
 const travelGem=()=>gemFor(travelLeft());
 const busyGem=()=>gemFor(busyLeft());
@@ -2222,7 +2278,7 @@ function upSub(){
   const lv=HLV(), mv=isMove(lv)&&!NET.on, c=upCost(lv);
   if(needLot(lv))return lotNeedText(lv)+`（いまの土地は ${PLOTS[S.netPlot].w}×${PLOTS[S.netPlot].h}）。空き地を買って引っ越すと上がれます`;
   let t=mv?`純資産の${Math.round(MOVE_RATE*100)}%＝${yen(c)}円`:`${yen(c)}円`;
-  t+=` ／ ${fmtMin(hUpTime(lv))}`;
+  t+=` ／ ${fmtMin(showMin(hUpTime(lv)))}`;
   if(matNeed(lv+1))t+=` ・ 建材 ${matNeed(lv+1)}個（手持ち ${S.inv.mat||0}）`;
   if(mv)t+=` ・ ${TIERS[tierOf(lv+1)].n}へ。家賃 週${yen(hRent(lv+1))}円`;
   return t;
@@ -2448,8 +2504,8 @@ function drawClock(el){
       <span class="bar" style="margin-bottom:7px"><i style="width:${done}%;
         background:linear-gradient(90deg,#3A7C72,var(--teal))"></i></span>
       <div class="hpacts" style="margin-top:0;grid-template-columns:${tv&&b.total>b.travel?"1fr 1fr":"1fr"}">
-      ${tv&&b.total>b.travel?`<button class="sm go" id="rushtravel" ${S.gems<tcost?"disabled":""}>💎${tcost} で移動だけ飛ばす</button>`:""}
-      <button class="sm go" id="rushbtn" ${S.gems<busyGem()?"disabled":""}>💎${busyGem()} で今すぐ終わらせる</button></div>`;
+      ${tv&&b.total>b.travel?`<button class="sm go" id="rushtravel" ${S.gems<tcost?"disabled":""}>${gemBtn(tcost,"で移動だけ飛ばす")}</button>`:""}
+      <button class="sm go" id="rushbtn" ${S.gems<busyGem()?"disabled":""}>${gemBtn(busyGem(),"で今すぐ終わらせる")}</button></div>`;
   }else{
     wrap.innerHTML=`<div class="nb-t">🕒 手が空いています　いる場所：${nameAt(S.at)}</div>`;
   }
@@ -2460,7 +2516,7 @@ function drawClock(el){
     const nm=isH?`住居 Lv${HLV()+1}`:ROOMS.find(x=>x.id===S.build.id).n;
     const need=gemFor(S.build.left);
     wrap.innerHTML+=`<div class="nb-sub">🔨 ${nm} を工事中　あと ${fmtMin(S.build.left)}
-      <button class="sm go mini" id="rushbuild" ${S.gems<need?"disabled":""}>💎${need} で今すぐ完成</button></div>`;
+      <button class="sm go mini" id="rushbuild" ${S.gems<need?"disabled":""}>${gemBtn(need,"で今すぐ完成")}</button></div>`;
   }
   const hp=Math.round(S.hp), mx=hpMax(), pc=hp/mx*100;
   wrap.innerHTML+=`<div class="hprow">
@@ -2542,10 +2598,10 @@ const TUT=[
   {id:"name",     t:"まずは名前を決めよう。", hint:""},
   {id:"pickShop", t:"すぐ近くの商店へ行こう。光っている建物を押す。",
    hint:"光っている建物をタップ", tab:"map", map:()=>tutShop()},
-  {id:"work",     t:"ここでバイトができる。押すと勤務が始まる。",
+  {id:"work",     t:"ここでバイトができる。時間は💎で飛ばせる。押してみよう。",
    hint:()=>tutVisible(document.querySelector("#detail .btn.work1"))?"「バイトをする」を押す":"光っている商店をタップ",
    tab:"map", sel:"#detail .btn.work1", map:()=>tutShop()},
-  {id:"gemskip",  t:"勤務中は待つ。急ぐなら💎で今すぐ終わらせられる。これがこのゲームの時短。",
+  {id:"gemskip",  t:"勤務中は待つ。長い待ちは💎で飛ばせる。これがこのゲームの時短。",
    hint:"「💎 で今すぐ終わらせる」を押す", sel:"#rushbtn"},
   {id:"buy",      t:"働くと体力が減る。食料を1個買おう。",
    hint:()=>tutVisible(document.querySelector("#detail .btn.food1"))?"「食料を1個買う」を押す":"光っている商店をタップ",
@@ -2586,9 +2642,12 @@ const TUT=[
    hint:"「受け取る」を押す", sel:"#dailygo"},
   {id:"taskclose",t:"",
    hint:"「閉じる」を押す", sel:"#taskclose"},
-  {id:"chatsay",  t:"ここではプレイ中の人と会話、契約ができる 何か送ってみよう",
-   hint:"なにか書いて「送る」を押す　例）よかったこの距離で",
+  {id:"chatsay",  t:"ここではプレイ中の人と会話、契約ができる まずはあいさつしてみよう",
+   hint:"",
    open:()=>{ S.ctab="town"; $("chatbar").classList.add("open"); },
+   btn:{label:"街のみんなに あいさつする",
+        fn:()=>{ try{chatPush(S.name||"あなた","はじめました","me");}catch(_){}
+                 tutStep("chatsay"); }},
    sel:"#chatform"},
   {id:"goal6",    t:"まずは家をLv6まで上げよう",
    hint:"", last:true},
@@ -2708,15 +2767,108 @@ function tutPick(sel){
   for(const q of list){ const e=document.querySelector(q); if(tutVisible(e))return e; }
   return document.querySelector(list[0]);
 }
+/* ============================================================
+   目標バー
+   チュートリアルが終わると案内バーが消え、画面から「次にやること」が
+   いなくなっていた。1日ぶんの記録を見たら、Lv1で止まった47人のうち44人、
+   Lv2で止まった35人のうち23人が、次の建て替え代を払える現金を持ったまま
+   止まっていた。お金ではなく、次の一手が見えていなかっただけ。
+   だから案内バーは消さず、そのまま「つぎ」を出しつづける。
+   ============================================================ */
+let GOALMIN=false;
+function goalNow(){
+  if(!S.name||tutOn())return null;
+  /* 窓（契約書・ガチャ・タスクなど）が開いている間は引っ込む。
+     出しっぱなしだと窓の上に重なって、消えないUIに見える */
+  if(document.querySelector(".modal.on"))return null;
+  /* 用事が先。留守の間に届いた契約書と個人チャットは、
+     画面のいちばん下の細い一行では気づかれない。目標バーの一等地に出す */
+  const co=(S.contracts||[]).filter(c=>c.state==="offer"&&!c.mine);
+  if(co.length){
+    const c=co[co.length-1], k=CKIND[c.kind]||{n:"契約書"};
+    return {t:"契約書が届いています",s:`${c.who||""}　${k.n}`,b:"契約書を見る",go:"co"};
+  }
+  const dmn=dmUnread();
+  if(dmn){
+    const who=Object.keys(S.dm||{}).find(nm=>dmOf(nm).some(m=>!m.me&&!m.r))||"";
+    const last=(dmOf(who).filter(m=>!m.me).slice(-1)[0]||{}).t||"";
+    return {t:"個人チャットが届いています",s:`${who}　${last.slice(0,24)}`,b:"メッセージを読む",go:"dm",who};
+  }
+  const h=HLV();
+  if(S.build)return {t:"いま建て替え中",s:"終わるまで待つか、💎で今すぐ完成",b:"ようすを見る",go:"home"};
+  const c=upCost(h);
+  const lot=(typeof needLot==="function")&&needLot(h);
+  if(h>=6&&!S.cls)return {t:"つぎの目標：生き方をひとつ選ぶ",s:"Lv6になりました",b:"役職を選ぶ",go:"cls"};
+  if(h>=6&&!hasFirm())return {t:"つぎの目標：会社を興す",s:"「会社」タブから起こせます",b:"会社タブへ",go:"biz"};
+  if(lot)return {t:`つぎの目標：住居 Lv${h+1}`,s:"先に広い土地が要ります",far:1,b:"土地をさがす",go:"home"};
+  const have=S.cash;
+  return have>=c
+    ? {t:`つぎの目標：住居 Lv${h+1}`,s:`${yen(c)}円・いま払えます`,b:"建て替える",go:"home"}
+    : {t:`つぎの目標：住居 Lv${h+1}`,s:`あと ${yen(c-have)}円`,far:1,b:"稼ぎに行く",go:"work"};
+}
+/* 押した先を数秒だけ光らせる（チュートリアルと同じ見た目） */
+function goalSpot(sel){
+  /* 候補は「前から順に」見る。querySelector にカンマで渡すと
+     文書の並び順で先に出てきた物が返り、狙いと違う所が光る */
+  const list=Array.isArray(sel)?sel:[sel];
+  setTimeout(()=>{ let e=null;
+    for(const q of list){ const c=document.querySelector(q); if(c){e=c;break;} }
+    if(!e)return;
+    e.classList.add("tut-target");
+    try{scrollIntoPane(e);}catch(_){}
+    setTimeout(()=>{try{e.classList.remove("tut-target");}catch(_){}},4200);
+  },200);
+}
+function goalDo(kind,g){
+  if(kind==="co"){ S.ctab="co"; $("chatbar").classList.add("open"); drawChat(); draw();
+    goalSpot(["#cpCo .sm.go","#cpCo .sm","#ctCo"]); return; }
+  if(kind==="dm"){ S.ctab="dm"; if(g&&g.who)S.dmOpen=g.who;
+    $("chatbar").classList.add("open"); drawChat(); draw(); return; }
+  if(kind==="cls"){ try{openClass();}catch(_){} return; }
+  if(kind==="biz"){ go("biz"); draw(); goalSpot(["#cogo","#colbtn","#biz .btn"]); return; }
+  const to=(kind==="work")?tutShop():myHome();
+  if(to==null||to<0)return;
+  S.sel=to; try{centerOn(PLOTS[to]);}catch(_){}
+  go("map"); draw();
+  goalSpot(kind==="work"?["#detail .btn.work1"]:["#detail .btn.up1","#detail .btn.lot1","#detail .btn"]);
+}
+function drawGoalBar(box){
+  const g=goalNow();
+  if(!g){ drawGoalBar.last=null; return false; }
+  const html=`<div class="goal-row">
+      <div class="goal-tx"><div class="goal-t">${g.t}</div>
+        <span class="goal-s${g.far?" far":""}">${g.s||""}</span></div>
+      <button class="sm go goal-b" id="goalgo">${g.b||"ようすを見る"}</button>
+      <button class="goal-min" id="goalmin" title="小さくする">${GOALMIN?"▲":"▼"}</button>
+    </div>`;
+  box.style.display="block";
+  box.classList.add("goal");
+  box.classList.toggle("min",GOALMIN);
+  if(drawGoalBar.last!==html){
+    drawGoalBar.last=html;
+    box.innerHTML=html;
+    const b=$("goalgo"); if(b)b.onclick=()=>goalDo(g.go,g);
+    const m=$("goalmin"); if(m)m.onclick=()=>{ GOALMIN=!GOALMIN; drawGoalBar.last=null; drawTut(); };
+  }
+  return true;
+}
 function drawTut(){
   tutAuto();
   const box=$("tutbar");
-  document.querySelectorAll(".tut-target").forEach(e=>e.classList.remove("tut-target"));
   /* タイトルと名前を聞く画面が出ている間は、案内を出さない。
      案内の札は窓より上に描かれるので、題字と紹介文の真上に重なってしまう */
   const front=["titlebox","namebox"].some(id=>{const e=$(id); return e&&e.classList.contains("on");});
-  if(!tutOn()||front){ box.innerHTML=""; box.style.display="none";
-    const m=$("tutmask"); if(m)m.classList.remove("on"); return; }
+  /* チュートリアル中は毎回照らし直す。終わったあと（目標バー）は、
+     ここが毎秒走るので、目標バーから照らした所を消してしまわないよう、
+     バーが出た瞬間だけ消す */
+  if(tutOn()&&!front||drawGoalBar.last==null)
+    document.querySelectorAll(".tut-target").forEach(e=>e.classList.remove("tut-target"));
+  if(!tutOn()||front){ const m=$("tutmask"); if(m)m.classList.remove("on");
+    box.classList.remove("float","top","bottom");
+    if(front||!drawGoalBar(box)){ box.innerHTML=""; box.style.display="none";
+      box.classList.remove("goal","min"); drawGoalBar.last=null; }
+    return; }
+  box.classList.remove("goal","min"); drawGoalBar.last=null;
   box.style.display="block";
   const c=tutCur();
   /* 「ここまで来たら続き」という手順。条件が揃うまでは案内を出さない */
@@ -2728,9 +2880,11 @@ function drawTut(){
       <button class="tut-x" id="tutx">スキップ</button></div>
     ${c.t?`<div class="tut-t">${c.t}</div>`:""}
     ${(typeof c.hint==="function"?c.hint():c.hint)?`<div class="tut-hint">👉 ${typeof c.hint==="function"?c.hint():c.hint}</div>`:""}
+    ${c.btn?`<button class="sm go" id="tutbtn" style="margin-top:8px;width:100%">${c.btn.label}</button>`:""}
     ${c.last?`<button class="sm go" id="tutdone" style="margin-top:8px">はじめる</button>`:""}`;
   const x=$("tutx"); if(x)x.onclick=tutSkip;
   const d2=$("tutdone"); if(d2)d2.onclick=()=>{S.tut++;draw();};
+  const tb=$("tutbtn"); if(tb)tb.onclick=()=>{ try{c.btn.fn();}catch(_){} draw(); };
   let target=null, rect=null;
   const selEl=c.sel?tutPick(c.sel):null;
   const useMap=!(c.tab&&S.pane!==c.tab)&&!(selEl&&tutVisible(selEl))&&!!c.map;
@@ -2797,6 +2951,7 @@ function drawLive(){
   if(S.pane==="tech")drawTech();
   if(S.pane==="biz")drawBiz();
   if(S.pane==="log"){try{drawRank();}catch(_){}}
+  if(!tutOn())try{drawTut();}catch(_){}
   commitStaged();
   try{drawTut();}catch(_){}
 }
@@ -3097,7 +3252,7 @@ function drawDetail(){
       w.appendChild(h2);
     }
     if(isMove(HLV())&&!NET.on){const p=document.createElement("p"); p.className="hint";
-      p.textContent=`引っ越しは賭け。純資産（所持金・預金・車・会社・物件から借入と負債を引いた額 ${yen(netWorth())}円）の半分を払い、払った分は戻らない。工事の ${fmtMin(hUpTime(HLV()))} は家財が箱詰めで金庫室が使えず、狙われる確率が1.8倍になる（現金は銀行へ）。移った先は家賃 週${yen(hRent(HLV()+1))}円、4週滞納すると前の家に戻される。`; w.appendChild(p);}
+      p.textContent=`引っ越しは賭け。純資産（所持金・預金・車・会社・物件から借入と負債を引いた額 ${yen(netWorth())}円）の半分を払い、払った分は戻らない。工事の ${fmtMin(showMin(hUpTime(HLV())))} は家財が箱詰めで金庫室が使えず、狙われる確率が1.8倍になる（現金は銀行へ）。移った先は家賃 週${yen(hRent(HLV()+1))}円、4週滞納すると前の家に戻される。`; w.appendChild(p);}
   }else if(kind==="lot"||kind==="myland"||kind==="land"){
     const p=PLOTS[S.sel], px=landPx(S.sel), l=landOf(S.sel);
     const big=nearBig(S.sel);
@@ -3181,9 +3336,9 @@ function drawDetail(){
     head(kind==="shop"?"商店":"市場",kind==="shop"?"食料と乗り物":"相場は安い",
       `1個 ${yen(foodPrice(pr))}円 ／ 食べると体力 +${FOOD_HP}`);
     if(kind==="shop"){
-      const j=JOBS.part;
-      mkBtn(box,j.ic,`バイトをする（${fmtMin(j.min)}）`,
-        `${tv>0?`移動 ${fmtMin(tv)}＋`:""}${fmtMin(j.min)} ／ +${yen(Math.round(j.pay*0.9))}円 ・ 体力 −${j.hp}`,
+      const j=JOBS.part, jm=showMin(j.min);
+      mkBtn(box,j.ic,`バイトをする（${fmtMin(jm)}）`,
+        `${tv>0?`移動 ${fmtMin(showMin(tv))}＋`:""}${fmtMin(jm)} ／ +${yen(Math.round(j.pay*0.9))}円 ・ 体力 −${j.hp}`,
         ()=>{S.job="part"; work();},"key work1",isBusy()||S.hp<j.hp);
     }
     mkBtn(box,"🍚","食料を1個買う",`${yen(foodPrice(pr))}円 ・ 体力 +${FOOD_HP}`,
@@ -3201,8 +3356,8 @@ function drawDetail(){
     const j=JOBS.npc, wg=Math.round(j.pay*(1+tEff("kin")+cardEff("wage")));
     head("運営企業","誰でも入れる",`1勤務 ${yen(wg)}円（給与税10%が引かれます）`);
     if(S.job!=="npc")mkBtn(box,"💼","ここに勤める","条件なし",()=>{S.job="npc";S.jobAt=null;say("運営企業へ就職",0,1);draw();},"wide");
-    else mkBtn(box,"⚒",`働く（${fmtMin(j.min)}）`,
-      `${tv>0?`移動 ${fmtMin(tv)}＋`:""}勤務 ${fmtMin(j.min)} ／ +${yen(Math.round(wg*0.9))}円`,
+    else mkBtn(box,"⚒",`働く（${fmtMin(showMin(j.min))}）`,
+      `${tv>0?`移動 ${fmtMin(showMin(tv))}＋`:""}勤務 ${fmtMin(showMin(j.min))} ／ +${yen(Math.round(wg*0.9))}円`,
       work,"key wide",isBusy()||S.hp<j.hp);
   }else if(kind==="farm"||kind==="mine"||kind==="forest"){
     const st=SITES[S.sel]||{}, lab={farm:"農地",mine:"鉱山",forest:"森"}[kind];
@@ -3223,7 +3378,7 @@ function drawDetail(){
   }else if(kind==="bus"){
     head(nameAt(S.sel),"バス",`停留所どうしは徒歩の${BUS_MUL}倍速。運賃は ${busFare(0)}円＋1マス1.5円（例：端っこ→中心 ${yen(busFare(dist(BUSSTOP[0],BUSSTOP[1])))}円）。待ち ${BUS_WAIT}分。<br>行き先を選んで移動すると、歩くより速ければ自動でバスに乗ります。原付・車を持つとバスは使いません。`);
     BUSSTOP.filter(i=>i!==S.at&&i!==S.sel).forEach(i=>{const pl=travelPlan(S.at,i);
-      mkBtn(box,"🚌",`${stopName(i)}へ`,pl.bus?`${fmtMin(pl.min)} ・ 運賃 ${yen(pl.fare)}円`:`${fmtMin(pl.min)} ・ 歩き（${S.cash<busFare(dist(S.at,i))?"運賃が足りない":"歩いた方が早い"}）`,()=>begin("move",i,0,nameAt(i)),"",isBusy());});
+      mkBtn(box,"🚌",`${stopName(i)}へ`,pl.bus?`${fmtMin(showMin(pl.min))} ・ 運賃 ${yen(pl.fare)}円`:`${fmtMin(showMin(pl.min))} ・ 歩き（${S.cash<busFare(dist(S.at,i))?"運賃が足りない":"歩いた方が早い"}）`,()=>begin("move",i,0,nameAt(i)),"",isBusy());});
   }else if(kind==="school"){
     head("訓練所","産業のノウハウ","ここで受講すると、製鉄や自動車などの会社を起こせるようになる。研究は技術タブで。");
     mkBtn(box,"📚","技術タブを開く","産業のノウハウは、ここにいる時だけ受講を始められる",()=>{tutStep("school6"); go("tech");},"key wide");
@@ -3248,8 +3403,8 @@ function drawDetail(){
     if(!mine)mkBtn(box,"💼","応募して入社する",why?why:"条件を満たしています",
       ()=>{S.job="pc";S.jobAt=S.sel;say(`${co.name}に入社`,0,1);chatPush("",`${S.name||"あなた"} が ${co.name} に入社`,"sys");draw();},
       "wide",!!why);
-    else mkBtn(box,"⚒",`働く（${fmtMin(j.min)}）`,
-      `${tv>0?`移動 ${fmtMin(tv)}＋`:""}勤務 ${fmtMin(j.min)} ／ +${yen(Math.round(wg*0.9))}円`,
+    else mkBtn(box,"⚒",`働く（${fmtMin(showMin(j.min))}）`,
+      `${tv>0?`移動 ${fmtMin(showMin(tv))}＋`:""}勤務 ${fmtMin(showMin(j.min))} ／ +${yen(Math.round(wg*0.9))}円`,
       work,"key wide",isBusy()||S.hp<j.hp);
   }else if(kind==="pcco"){
     const co=coAt(S.sel), j=JOBS.pc, wg=Math.round(co.wage*(1+tEff("kin")+cardEff("wage")));
@@ -3260,8 +3415,8 @@ function drawDetail(){
     if(!mine)mkBtn(box,"💼","応募して入社する",why?why:"条件を満たしています",
       ()=>{S.job="pc";S.jobAt=S.sel;say(`${co.name}に入社`,0,1);chatPush("",`${S.name||"あなた"} が ${co.name} に入社`,"sys");draw();},
       "key wide",!!why);
-    else mkBtn(box,"⚒",`働く（${fmtMin(j.min)}）`,
-      `${tv>0?`移動 ${fmtMin(tv)}＋`:""}勤務 ${fmtMin(j.min)} ／ +${yen(Math.round(wg*0.9))}円`,
+    else mkBtn(box,"⚒",`働く（${fmtMin(showMin(j.min))}）`,
+      `${tv>0?`移動 ${fmtMin(showMin(tv))}＋`:""}勤務 ${fmtMin(showMin(j.min))} ／ +${yen(Math.round(wg*0.9))}円`,
       work,"key wide",isBusy()||S.hp<j.hp);
   }else{
     const n=npcAt(S.sel);
@@ -3350,7 +3505,7 @@ function drawHome(){
       <span class="d-t">あと ${fmtMin(S.build.left)}</span></div>
       <span class="bar" style="margin-bottom:8px"><i style="width:${pct}%;
         background:linear-gradient(90deg,#3A7C72,var(--teal))"></i></span>
-      <button class="sm go" id="bskip" ${S.gems<need?"disabled":""}>💎${need} で今すぐ完成</button>`;
+      <button class="sm go" id="bskip" ${S.gems<need?"disabled":""}>${gemBtn(need,"で今すぐ完成")}</button>`;
     const b=B.querySelector("#bskip"); if(b&&S.gems>=need)b.onclick=skipBuild;
   }else{
     B.className="queue empty";
@@ -3431,7 +3586,7 @@ function drawHome(){
     if(capped)mkBtn(box,"🔒","増築できない",`${hName(HLV())}では Lv${roomCap(HLV())} まで。先に引越しを`,null,"wide",true);
     else if(busy)mkBtn(box,"🔨","増築中",`あと ${fmtMin(S.build.left)}`,null,"wide",true);
     else if(S.build)mkBtn(box,"⏳","他の部屋を増築中","同時に1つだけ",null,"wide",true);
-    else mkBtn(box,"🔨",`Lv${l+1} に増築`,`${yen(cost(r,l))}円 ／ ${fmtMin(rTime(l))}`,
+    else mkBtn(box,"🔨",`Lv${l+1} に増築`,`${yen(cost(r,l))}円 ／ ${fmtMin(showMin(rTime(l)))}`,
       ()=>build(r),"key wide",S.cash<cost(r,l));
     D.appendChild(w);
   }
@@ -3455,7 +3610,7 @@ function drawTech(){
       <span class="d-t">あと ${fmtMin(S.queue.left)}</span></div>
       <span class="bar" style="margin-bottom:8px"><i style="width:${pct}%;
         background:linear-gradient(90deg,#3A7C72,var(--teal))"></i></span>
-      <button class="sm go" id="qskip" ${S.gems<need?"disabled":""}>💎${need} で今すぐ完了</button>`;
+      <button class="sm go" id="qskip" ${S.gems<need?"disabled":""}>${gemBtn(need,"で今すぐ完了")}</button>`;
     const b=Q.querySelector("#qskip"); if(b&&S.gems>=need)b.onclick=skipTech;
   }else{
     Q.className="queue empty";
@@ -3473,7 +3628,7 @@ function drawTech(){
       <span class="pips">${pips}</span></div>
       <div class="r-e">${l?t.e(l):"未修得"}${l<MAXLV?`<br><span style="color:var(--faint)">次: ${t.e(l+1)}</span>`:""}</div>
       <button class="sm${!S.queue&&!max?" go":""}" ${max||S.queue||S.cash<tCost(t,l)?"disabled":""}>${
-        max?"習得ずみ":busy?"研究中":`${yen(tCost(t,l))}円 ／ ${fmtMin(tTime(t,l))}`}</button>`;
+        max?"習得ずみ":busy?"研究中":`${yen(tCost(t,l))}円 ／ ${fmtMin(showMin(tTime(t,l)))}`}</button>`;
     const b=d.querySelector("button");
     if(!max&&!S.queue&&S.cash>=tCost(t,l))b.onclick=()=>research(t);
     T.appendChild(d);
@@ -3491,7 +3646,7 @@ function drawTech(){
     d.innerHTML=`<div class="r-h"><span class="r-n">${t.ic} ${t.n}</span><span class="pips">${pips}</span></div>
       <div class="r-e">${l?t.e(l):"未修得"}${l<MAXLV?`<br><span style="color:var(--faint)">次: ${t.e(l+1)}</span>`:""}${t.unlock?`<br><span style="color:var(--gold)">${t.unlock}</span>`:""}</div>
       <button class="sm${!S.queue&&!max&&atSchool?" go":""}" ${max||S.queue||S.cash<tCost(t,l)||!atSchool?"disabled":""}>${
-        max?"習得ずみ":busy?"受講中":!atSchool?"訓練所で受講":`${yen(tCost(t,l))}円 ／ ${fmtMin(tTime(t,l))}`}</button>`;
+        max?"習得ずみ":busy?"受講中":!atSchool?"訓練所で受講":`${yen(tCost(t,l))}円 ／ ${fmtMin(showMin(tTime(t,l)))}`}</button>`;
     const b=d.querySelector("button");
     if(!max&&!S.queue&&S.cash>=tCost(t,l)&&atSchool)b.onclick=()=>research(t);
     T.appendChild(d);
@@ -6235,16 +6390,44 @@ function suggestName(){
     if(!used.has(n))return n; }
   return NAMEPOOL[Math.floor(Math.random()*NAMEPOOL.length)]+(Math.floor(Math.random()*90)+10);
 }
+/* 名前くらべ：全角半角・大文字小文字・前後の空白を無視してそろえる。
+   これをしないと Aki と ａｋｉ が別人になり、街に同じ名前が並ぶ */
+const nameKey=s=>String(s||"").normalize("NFKC").trim().toLowerCase();
+/* その名前がもう街にいるか。手元の名簿は読み込み前だと空なので、サーバーにも聞く。
+   聞けなかった時は通す（名前を決められない方が困る） */
+async function nameTaken(v){
+  const k=nameKey(v); if(!k)return false;
+  if(Object.values(NET.players||{}).some(p=>p&&nameKey(p.name)===k))return true;
+  try{
+    const sbc=NET.sb; if(!sbc)return false;
+    const {data}=await sbc.from("players").select("name").eq("world",NET.world||1);
+    return (data||[]).some(p=>nameKey(p.name)===k);
+  }catch(_){ return false; }
+}
+/* 名前は必ず自分で入れてもらう。
+   候補を先に入れておく作りにしたら、26%がそれをそのまま使い、
+   Masa が3人・Taku が3人・Aki が3人という街になった。
+   しかも名無しは31%のままで、そもそも効いていなかった。 */
 function openName(){
   $("titlebox").classList.remove("on");
   $("namebox").classList.add("on");
-  const inp=$("nameinput");
-  inp.value=suggestName();
-  $("namedice").onclick=()=>{ inp.value=suggestName(); };
+  const inp=$("nameinput"), btn=$("namego"), msg=$("namemsg");
+  inp.value=""; msg.textContent=""; btn.disabled=true;
   setTimeout(()=>inp.focus(),80);
-  const go=()=>{
+  inp.oninput=()=>{ btn.disabled=!(inp.value||"").trim(); msg.textContent=""; };
+  let busy=false;
+  const go=async()=>{
+    if(busy)return;
     const v=(inp.value||"").trim().slice(0,10);
-    S.name=v||suggestName();
+    if(!v){ msg.textContent="名前を入れてください"; inp.focus(); return; }
+    if(nameKey(v)===nameKey("名無し")){ msg.textContent="その名前は使えません"; return; }
+    busy=true; btn.disabled=true; msg.textContent="確かめています…";
+    let dup=false; try{ dup=await nameTaken(v); }catch(_){}
+    busy=false; btn.disabled=false;
+    if(dup){ msg.textContent="その名前はもう使われています。ちがう名前にしてください";
+             inp.focus(); try{inp.select();}catch(_){} return; }
+    msg.textContent="";
+    S.name=v;
     $("namebox").classList.remove("on");
     say(`${S.name} としてこの街に来た`,0,1);
     /* ここで初めて街に登録する（名前を決めた人だけが住人になる）。
