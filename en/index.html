@@ -829,7 +829,8 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
   <div class="mcard tcard">
     <div class="tlogo">Wage Slave<br>Simulator</div>
     <div class="tsub">One town, everyone in it</div>
-    <button class="sm go" id="titlego" style="margin-top:22px;padding:11px">Start</button>
+    <button class="sm go" id="titlego" style="margin-top:22px;padding:11px"
+      onclick="try{titleGo()}catch(e){try{document.getElementById('titlebox').classList.remove('on')}catch(_){}}">Start</button>
     <div class="tver" id="tver"></div>
     <a class="tlang" id="tlang" href="../index.html">日本語</a>
   </div>
@@ -6265,6 +6266,12 @@ function drawBankPanel(B){
 /* ---- 画面:Market(Auc売タブの中) ---- */
 
 function draw(){
+  try{ drawHead(); }catch(err){ console.error(err); }
+  drawRest();
+}
+/* 画面いちばん上の帯.ここ 転ぶand画面全体 描けなくなり,
+   “Start 押しても何も起きない”よう at見える.切り離して守る */
+function drawHead(){
   $("hCash").textContent=yen(S.cash); $("hBank").textContent=yen(S.bank);
   $("hFood").textContent=S.food; $("hGem").textContent=S.gems;
   $("tag").textContent=S.jail>S.t?`In custody left ${fmtMin(S.jail-S.t)}`
@@ -6279,6 +6286,8 @@ function draw(){
   let rk="F"; RANKS.forEach(([v,r])=>{if(tot()>=v)rk=r;});
   $("rank").textContent=rk;
   drawClock($("clock"));
+}
+function drawRest(){
   try{ drawMap(); }catch(err){
     $("city").innerHTML=`<text x="20" y="40" fill="#D9553F"
       style="font-size:13px">Error drawing the town: ${String(err.message).slice(0,60)}</text>`;
@@ -7111,11 +7120,29 @@ $("tver").textContent=`${VERSION} — money and goods live on the server`;
    クリックは“押した所and離した所 同じ”でないand出ないので,
    その間 at画面 描き替わるand取りこぼす */
 function titleGo(){
-  $("titlebox").classList.remove("on");
-  if(!S.name&&!$("namebox").classList.contains("on"))openName();
+  try{ document.getElementById("titlebox").classList.remove("on"); }catch(_){}
+  try{ if(!S.name&&!$("namebox").classList.contains("on"))openName(); }catch(e){ console.error(e); }
+  try{ draw(); }catch(_){}
 }
+/* 起動の途中でどこか 転ぶand,“Start” at手 付かなNowまleft,
+   押しても何も起きない画面 atなる.2026-09-08  at実際 atその報告 来た.
+   何 起きても中 atはGiveよう atして,開き直す道も出す. */
+addEventListener("error",function(){
+  try{
+    if(window.__bootErr)return; window.__bootErr=1;
+    const t=document.getElementById("titlebox"), c=t&&t.querySelector(".tcard");
+    if(!c)return;
+    const d=document.createElement("div"); d.className="tver"; d.style.color="#D9553F";
+    d.textContent="読み込みで何か起きました.開き直すand直るこand あります";
+    c.appendChild(d);
+    const b=document.createElement("button"); b.className="sm"; b.style.marginTop="8px";
+    b.textContent="開き直す"; b.onclick=function(){ location.reload(); };
+    c.appendChild(b);
+  }catch(_){}
+},true);
 $("titlego").onclick=titleGo;
 $("titlego").addEventListener("pointerup",titleGo);
+$("titlego").addEventListener("pointerdown",titleGo);
 if(S.name)$("titlebox").classList.remove("on");   /* 続きfrom遊ぶpeople atはタイトル 出さない */
 setInterval(()=>{ if(!S.over)tick(); },400);
 /* 画面 Close · 裏 at runsすandき at,送っていない現金の差額 流し込む */

@@ -829,7 +829,8 @@ html,body{height:100%; overflow:hidden; overscroll-behavior:none}
   <div class="mcard tcard">
     <div class="tlogo">社畜<br>シミュレーター</div>
     <div class="tsub">みんなで一つの街</div>
-    <button class="sm go" id="titlego" style="margin-top:22px;padding:11px">はじめる</button>
+    <button class="sm go" id="titlego" style="margin-top:22px;padding:11px"
+      onclick="try{titleGo()}catch(e){try{document.getElementById('titlebox').classList.remove('on')}catch(_){}}">はじめる</button>
     <div class="tver" id="tver"></div>
     <a class="tlang" id="tlang" href="en/index.html">English</a>
   </div>
@@ -6265,6 +6266,12 @@ function drawBankPanel(B){
 /* ---- 画面：市場（競売タブの中） ---- */
 
 function draw(){
+  try{ drawHead(); }catch(err){ console.error(err); }
+  drawRest();
+}
+/* 画面いちばん上の帯。ここが転ぶと画面全体が描けなくなり、
+   「はじめるを押しても何も起きない」ように見える。切り離して守る */
+function drawHead(){
   $("hCash").textContent=yen(S.cash); $("hBank").textContent=yen(S.bank);
   $("hFood").textContent=S.food; $("hGem").textContent=S.gems;
   $("tag").textContent=S.jail>S.t?`拘置中　残り ${fmtMin(S.jail-S.t)}`
@@ -6279,6 +6286,8 @@ function draw(){
   let rk="F"; RANKS.forEach(([v,r])=>{if(tot()>=v)rk=r;});
   $("rank").textContent=rk;
   drawClock($("clock"));
+}
+function drawRest(){
   try{ drawMap(); }catch(err){
     $("city").innerHTML=`<text x="20" y="40" fill="#D9553F"
       style="font-size:13px">街の描画でエラー: ${String(err.message).slice(0,60)}</text>`;
@@ -7111,11 +7120,29 @@ $("tver").textContent=`${VERSION}　お金も品物もサーバーにある`;
    クリックは「押した所と離した所が同じ」でないと出ないので、
    その間に画面が描き替わると取りこぼす */
 function titleGo(){
-  $("titlebox").classList.remove("on");
-  if(!S.name&&!$("namebox").classList.contains("on"))openName();
+  try{ document.getElementById("titlebox").classList.remove("on"); }catch(_){}
+  try{ if(!S.name&&!$("namebox").classList.contains("on"))openName(); }catch(e){ console.error(e); }
+  try{ draw(); }catch(_){}
 }
+/* 起動の途中でどこかが転ぶと、「はじめる」に手が付かないまま残り、
+   押しても何も起きない画面になる。2026-09-08 に実際にその報告が来た。
+   何が起きても中には入れるようにして、開き直す道も出す。 */
+addEventListener("error",function(){
+  try{
+    if(window.__bootErr)return; window.__bootErr=1;
+    const t=document.getElementById("titlebox"), c=t&&t.querySelector(".tcard");
+    if(!c)return;
+    const d=document.createElement("div"); d.className="tver"; d.style.color="#D9553F";
+    d.textContent="読み込みで何か起きました。開き直すと直ることがあります";
+    c.appendChild(d);
+    const b=document.createElement("button"); b.className="sm"; b.style.marginTop="8px";
+    b.textContent="開き直す"; b.onclick=function(){ location.reload(); };
+    c.appendChild(b);
+  }catch(_){}
+},true);
 $("titlego").onclick=titleGo;
 $("titlego").addEventListener("pointerup",titleGo);
+$("titlego").addEventListener("pointerdown",titleGo);
 if(S.name)$("titlebox").classList.remove("on");   /* 続きから遊ぶ人にはタイトルを出さない */
 setInterval(()=>{ if(!S.over)tick(); },400);
 /* 画面を閉じる・裏に回すときに、送っていない現金の差額を流し込む */
